@@ -30,10 +30,10 @@ export default async function AdminPage() {
     return (
       <main className="flex flex-1 flex-col">
         <Brand subtitle="Studio access" />
-        <div className="mx-4 mb-10 rounded-2xl bg-brand-900/50 p-6 shadow-soft ring-1 ring-brand-300/10">
+        <div className="mx-4 mb-10 rounded-2xl border border-brand-200 bg-white p-6 shadow-card">
           {!hasPassword ? (
-            <p className="text-sm text-red-200">
-              The server is missing <code className="rounded bg-black/40 px-1">ADMIN_PASSWORD</code>.
+            <p className="text-sm text-accent-700">
+              The server is missing <code className="rounded bg-brand-100 px-1 text-brand-700">ADMIN_PASSWORD</code>.
               Set it in your environment before using the admin page.
             </p>
           ) : (
@@ -51,7 +51,7 @@ export default async function AdminPage() {
       <Brand subtitle="Client submissions" />
 
       <div className="mx-4 mb-4 flex items-center justify-between">
-        <p className="text-sm text-brand-200/70">
+        <p className="text-sm text-brand-500">
           {submissions.length} submission{submissions.length === 1 ? '' : 's'}
         </p>
         <AdminSignOutButton />
@@ -59,7 +59,7 @@ export default async function AdminPage() {
 
       <div className="mx-4 mb-10 flex flex-col gap-4">
         {submissions.length === 0 && (
-          <div className="rounded-2xl bg-brand-900/50 p-6 text-center text-sm text-brand-200/70 ring-1 ring-brand-300/10">
+          <div className="rounded-2xl border border-brand-200 bg-white p-6 text-center text-sm text-brand-500 shadow-card">
             No submissions yet.
           </div>
         )}
@@ -67,23 +67,23 @@ export default async function AdminPage() {
         {submissions.map((s) => (
           <article
             key={s.id}
-            className="rounded-2xl bg-brand-900/50 p-4 shadow-soft ring-1 ring-brand-300/10"
+            className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card"
           >
             <header className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="font-display text-lg text-brand-50">
+                <h2 className="text-lg font-semibold text-brand-900">
                   {s.title || 'Untitled submission'}
                 </h2>
-                <p className="text-xs text-brand-200/60">
+                <p className="text-xs text-brand-500">
                   {formatDate(s.createdAt)}
                 </p>
               </div>
-              <div className="text-right text-xs text-brand-200/70">
-                <p className="font-medium text-brand-100">{s.clientName}</p>
+              <div className="text-right text-xs text-brand-500">
+                <p className="font-semibold text-brand-800">{s.clientName}</p>
                 {s.clientEmail && (
                   <a
                     href={`mailto:${s.clientEmail}`}
-                    className="text-brand-300 underline-offset-2 hover:underline"
+                    className="text-accent-600 underline-offset-2 hover:underline"
                   >
                     {s.clientEmail}
                   </a>
@@ -92,7 +92,7 @@ export default async function AdminPage() {
             </header>
 
             {s.description && (
-              <p className="mt-3 whitespace-pre-wrap text-sm text-brand-100/90">
+              <p className="mt-3 whitespace-pre-wrap text-sm text-brand-700">
                 {s.description}
               </p>
             )}
@@ -105,7 +105,7 @@ export default async function AdminPage() {
                     key={f.storedName}
                     href={url}
                     target="_blank"
-                    className="group relative aspect-square overflow-hidden rounded-lg bg-brand-950/60 ring-1 ring-brand-300/10"
+                    className="group relative aspect-square overflow-hidden rounded-lg bg-brand-100 ring-1 ring-brand-200 transition hover:ring-accent-400"
                     title={`${f.originalName} · ${formatBytes(f.size)}`}
                   >
                     {f.kind === 'image' ? (
@@ -138,7 +138,7 @@ export default async function AdminPage() {
               })}
             </div>
 
-            <p className="mt-3 text-[11px] uppercase tracking-wider text-brand-300/50">
+            <p className="mt-3 text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-400">
               {s.files.length} file{s.files.length === 1 ? '' : 's'} ·{' '}
               {formatBytes(s.files.reduce((a, f) => a + f.size, 0))}
             </p>

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     title: 'RP Upload',
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
   },
   icons: {
     icon: [
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#1e1108',
+  themeColor: '#d9232b',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
@@ -37,7 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gradient-to-b from-brand-950 via-brand-900 to-black text-brand-50 antialiased">
+      <body className="min-h-screen bg-gradient-to-b from-white via-brand-50 to-brand-100 text-brand-900 antialiased">
         <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col pt-safe pb-safe">
           {children}
         </div>

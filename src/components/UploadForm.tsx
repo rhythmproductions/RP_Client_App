@@ -204,21 +204,21 @@ export function UploadForm() {
 
   if (status.state === 'success') {
     return (
-      <div className="fade-in-up mx-4 mb-8 rounded-2xl bg-brand-900/60 p-6 text-center shadow-soft ring-1 ring-brand-300/20">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-600/30 ring-1 ring-brand-300/30">
-          <svg className="h-7 w-7 text-brand-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <div className="fade-in-up mx-4 mb-8 rounded-2xl border border-brand-200 bg-white p-6 text-center shadow-card">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent-50 ring-1 ring-accent-200">
+          <svg className="h-7 w-7 text-accent-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
-        <h2 className="font-display text-xl text-brand-50">Thank you!</h2>
-        <p className="mt-2 text-sm text-brand-200/80">
+        <h2 className="text-xl font-semibold text-brand-900">Thank you!</h2>
+        <p className="mt-2 text-sm text-brand-500">
           Your files have been delivered to Rhythm Productions. We&apos;ll be
           in touch soon.
         </p>
         <button
           type="button"
           onClick={() => setStatus({ state: 'idle' })}
-          className="mt-6 rounded-full bg-brand-600 px-5 py-2 text-sm font-medium text-brand-50 shadow-soft transition hover:bg-brand-500 active:scale-[0.98]"
+          className="mt-6 rounded-full bg-accent-600 px-5 py-2 text-sm font-semibold text-white shadow-soft transition hover:bg-accent-500 active:scale-[0.98]"
         >
           Send more
         </button>
@@ -229,8 +229,8 @@ export function UploadForm() {
   return (
     <form onSubmit={submit} className="mx-4 mb-10 flex flex-col gap-5">
       {/* Client info */}
-      <div className="rounded-2xl bg-brand-900/50 p-4 shadow-soft ring-1 ring-brand-300/10">
-        <label className="block text-xs font-medium uppercase tracking-wider text-brand-200/70">
+      <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
+        <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
           Your name
         </label>
         <input
@@ -238,9 +238,9 @@ export function UploadForm() {
           value={clientName}
           onChange={(e) => setClientName(e.target.value)}
           placeholder="Jane Doe"
-          className="mt-1 w-full border-0 border-b border-brand-300/20 bg-transparent py-2 text-base text-brand-50 placeholder:text-brand-200/40 focus:border-brand-300 focus:outline-none focus:ring-0"
+          className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
         />
-        <label className="mt-4 block text-xs font-medium uppercase tracking-wider text-brand-200/70">
+        <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
           Email (optional)
         </label>
         <input
@@ -248,15 +248,15 @@ export function UploadForm() {
           value={clientEmail}
           onChange={(e) => setClientEmail(e.target.value)}
           placeholder="jane@example.com"
-          className="mt-1 w-full border-0 border-b border-brand-300/20 bg-transparent py-2 text-base text-brand-50 placeholder:text-brand-200/40 focus:border-brand-300 focus:outline-none focus:ring-0"
+          className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
         />
       </div>
 
       {/* Media picker */}
-      <div className="rounded-2xl bg-brand-900/50 p-4 shadow-soft ring-1 ring-brand-300/10">
+      <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg text-brand-50">Your media</h2>
-          <span className="text-xs text-brand-200/60">
+          <h2 className="text-lg font-semibold text-brand-900">Your media</h2>
+          <span className="text-xs text-brand-500">
             {items.length} file{items.length === 1 ? '' : 's'}
             {items.length > 0 && ` · ${formatBytes(totalBytes)}`}
           </span>
@@ -278,7 +278,7 @@ export function UploadForm() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-brand-300/40 bg-brand-950/40 px-4 py-5 text-sm text-brand-200 transition hover:border-brand-300/70 hover:bg-brand-950/60 active:scale-[0.99]"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 px-4 py-5 text-sm font-medium text-brand-600 transition hover:border-accent-500 hover:bg-accent-50 hover:text-accent-700 active:scale-[0.99]"
         >
           <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14M5 12h14" />
@@ -291,7 +291,7 @@ export function UploadForm() {
             {items.map((item) => (
               <div
                 key={item.id}
-                className="fade-in-up group relative aspect-square overflow-hidden rounded-lg bg-brand-950/60 ring-1 ring-brand-300/10"
+                className="fade-in-up group relative aspect-square overflow-hidden rounded-lg bg-brand-100 ring-1 ring-brand-200"
               >
                 {item.kind === 'image' ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -310,14 +310,14 @@ export function UploadForm() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-brand-300/60">
+                      <div className="flex h-full w-full items-center justify-center text-brand-400">
                         <svg className="h-7 w-7 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/50 ring-1 ring-white/30">
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/15">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/40">
                         <svg className="ml-0.5 h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
                           <path d="M8 5v14l11-7z" />
                         </svg>
@@ -329,7 +329,7 @@ export function UploadForm() {
                   type="button"
                   onClick={() => removeItem(item.id)}
                   aria-label="Remove"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/70 text-white opacity-80 transition group-hover:opacity-100"
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent-600 text-white opacity-90 shadow-soft transition hover:bg-accent-500 group-hover:opacity-100"
                 >
                   <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
                     <path d="M6 6l12 12M18 6 6 18" />
@@ -342,18 +342,18 @@ export function UploadForm() {
       </div>
 
       {/* Details */}
-      <div className="rounded-2xl bg-brand-900/50 p-4 shadow-soft ring-1 ring-brand-300/10">
-        <label className="block text-xs font-medium uppercase tracking-wider text-brand-200/70">
+      <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
+        <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
           Title
         </label>
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="e.g. Wedding first look"
-          className="mt-1 w-full border-0 border-b border-brand-300/20 bg-transparent py-2 text-base text-brand-50 placeholder:text-brand-200/40 focus:border-brand-300 focus:outline-none focus:ring-0"
+          className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
         />
 
-        <label className="mt-4 block text-xs font-medium uppercase tracking-wider text-brand-200/70">
+        <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
           Description / notes
         </label>
         <textarea
@@ -361,27 +361,27 @@ export function UploadForm() {
           onChange={(e) => setDescription(e.target.value)}
           rows={4}
           placeholder="Anything you'd like us to know about these files…"
-          className="mt-1 w-full resize-none rounded-lg border border-brand-300/10 bg-brand-950/40 px-3 py-2 text-sm text-brand-50 placeholder:text-brand-200/40 focus:border-brand-300 focus:outline-none focus:ring-0"
+          className="mt-1 w-full resize-none rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
         />
       </div>
 
       {/* Submit */}
-      <div className="sticky bottom-0 -mx-4 bg-gradient-to-t from-black/80 via-black/50 to-transparent px-4 pb-4 pt-2">
+      <div className="sticky bottom-0 -mx-4 bg-gradient-to-t from-white via-white/90 to-transparent px-4 pb-4 pt-2">
         {status.state === 'error' && (
-          <p className="mb-2 rounded-lg bg-red-500/10 px-3 py-2 text-center text-sm text-red-200 ring-1 ring-red-400/30">
+          <p className="mb-2 rounded-lg bg-accent-50 px-3 py-2 text-center text-sm text-accent-700 ring-1 ring-accent-200">
             {status.message}
           </p>
         )}
 
         {status.state === 'uploading' && (
           <div className="mb-3">
-            <div className="flex items-center justify-between text-xs text-brand-200/80">
+            <div className="flex items-center justify-between text-xs font-medium text-brand-600">
               <span>Uploading…</span>
               <span>{status.progress}%</span>
             </div>
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-brand-950/60">
+            <div className="mt-1 h-2 overflow-hidden rounded-full bg-brand-200">
               <div
-                className="h-full rounded-full bg-brand-300 transition-[width] duration-200"
+                className="h-full rounded-full bg-accent-600 transition-[width] duration-200"
                 style={{ width: `${status.progress}%` }}
               />
             </div>
@@ -391,7 +391,7 @@ export function UploadForm() {
         <button
           type="submit"
           disabled={!canSubmit}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-6 py-3.5 text-base font-semibold text-brand-50 shadow-soft transition hover:bg-brand-400 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-brand-800 disabled:text-brand-300/50"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-accent-600 px-6 py-3.5 text-base font-semibold text-white shadow-soft transition hover:bg-accent-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-brand-200 disabled:text-brand-400 disabled:shadow-none"
         >
           {status.state === 'uploading' ? 'Sending…' : 'Send to Rhythm Productions'}
         </button>

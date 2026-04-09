@@ -32,7 +32,7 @@ export function AdminLoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-3">
-      <label className="text-xs font-medium uppercase tracking-wider text-brand-200/70">
+      <label className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
         Admin password
       </label>
       <input
@@ -41,17 +41,17 @@ export function AdminLoginForm() {
         autoFocus
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="rounded-lg border border-brand-300/20 bg-brand-950/40 px-3 py-2 text-base text-brand-50 placeholder:text-brand-200/40 focus:border-brand-300 focus:outline-none"
+        className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none"
       />
       {error && (
-        <p className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-200 ring-1 ring-red-400/30">
+        <p className="rounded-lg bg-accent-50 px-3 py-2 text-sm text-accent-700 ring-1 ring-accent-200">
           {error}
         </p>
       )}
       <button
         type="submit"
         disabled={submitting || password.length === 0}
-        className="mt-2 rounded-full bg-brand-500 px-5 py-2.5 text-sm font-semibold text-brand-50 shadow-soft transition hover:bg-brand-400 disabled:cursor-not-allowed disabled:bg-brand-800 disabled:text-brand-300/50"
+        className="mt-2 rounded-full bg-accent-600 px-5 py-2.5 text-sm font-semibold text-white shadow-soft transition hover:bg-accent-500 disabled:cursor-not-allowed disabled:bg-brand-200 disabled:text-brand-400 disabled:shadow-none"
       >
         {submitting ? 'Signing in…' : 'Sign in'}
       </button>
@@ -70,7 +70,7 @@ export function AdminSignOutButton() {
         await fetch('/api/admin/login', { method: 'DELETE' });
         window.location.reload();
       }}
-      className="rounded-full border border-brand-300/20 px-3 py-1 text-xs text-brand-200 transition hover:border-brand-300/60 disabled:opacity-60"
+      className="rounded-full border border-brand-300 px-3 py-1 text-xs font-medium text-brand-600 transition hover:border-accent-500 hover:text-accent-600 disabled:opacity-60"
     >
       {busy ? 'Signing out…' : 'Sign out'}
     </button>

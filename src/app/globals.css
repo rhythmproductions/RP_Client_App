@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 :root {
-  --background: #1e1108;
-  --foreground: #f5ead6;
+  --background: #ffffff;
+  --foreground: #18181b;
+  --accent: #d9232b;
 }
 
 html,
@@ -33,7 +34,7 @@ body {
   width: 6px;
 }
 .media-grid::-webkit-scrollbar-thumb {
-  background: rgba(220, 179, 115, 0.3);
+  background: rgba(217, 35, 43, 0.35);
   border-radius: 999px;
 }
 

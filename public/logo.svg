@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 210" role="img" aria-label="Rhythm Productions">
+  <!--
+    Rhythm Productions wordmark.
+    To use the real logo, replace this file with your own logo.svg or
+    logo.png (any size). The Brand component references /logo.svg.
+  -->
+  <text
+    x="260"
+    y="110"
+    text-anchor="middle"
+    font-family="Impact, 'Arial Black', 'Helvetica Neue', sans-serif"
+    font-size="128"
+    font-weight="900"
+    font-style="italic"
+    fill="#D9232B"
+    letter-spacing="-3"
+  >RHYTHM</text>
+  <text
+    x="260"
+    y="180"
+    text-anchor="middle"
+    font-family="'Helvetica Neue', Arial, sans-serif"
+    font-size="44"
+    font-weight="500"
+    fill="#656667"
+    letter-spacing="16"
+  >PRODUCTIONS</text>
+</svg>

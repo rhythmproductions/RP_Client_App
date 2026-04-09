@@ -1,13 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#1e1108"/>
-      <stop offset="1" stop-color="#573416"/>
-    </linearGradient>
-  </defs>
-  <rect width="192" height="192" rx="36" fill="url(#g)"/>
-  <g fill="none" stroke="#dcb373" stroke-width="6" stroke-linecap="round">
-    <path d="M40 120 Q 60 70, 80 120 T 120 120 T 160 120"/>
-  </g>
-  <text x="96" y="165" font-family="Georgia, serif" font-size="32" font-weight="700" text-anchor="middle" fill="#f5ead6" letter-spacing="2">RP</text>
+  <rect width="192" height="192" rx="36" fill="#ffffff"/>
+  <rect x="6" y="6" width="180" height="180" rx="30" fill="none" stroke="#e4e4e7" stroke-width="2"/>
+  <text
+    x="96"
+    y="138"
+    text-anchor="middle"
+    font-family="Impact, 'Arial Black', 'Helvetica Neue', sans-serif"
+    font-size="138"
+    font-weight="900"
+    font-style="italic"
+    fill="#D9232B"
+    letter-spacing="-4"
+  >R</text>
 </svg>

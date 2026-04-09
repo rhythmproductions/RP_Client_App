@@ -7,7 +7,8 @@ app — no App Store, no Play Store.
 
 ## Features
 
-- Mobile-first, dark, professional interface
+- Mobile-first, professional interface in the Rhythm Productions
+  red / white / grey brand palette
 - Multi-select photos **and** videos from the phone's native picker
 - Instant preview grid — photos render directly, videos get a first-frame
   thumbnail generated on-device
@@ -68,7 +69,8 @@ src/
     auth.ts                 # Admin cookie helpers
 public/
   manifest.json             # PWA manifest
-  icon-192.svg / icon-512.svg
+  logo.svg                  # Header logo — replace with your own anytime
+  icon-192.svg / icon-512.svg  # PWA / home-screen icons
 data/                       # Created at runtime (gitignored)
   uploads/
   db.json
@@ -109,6 +111,25 @@ The app then launches full-screen with its own icon, just like a native app.
   `httpOnly`, `sameSite=lax` cookie for 8 hours.
 - Max 50 files / 500 MB per submission. Adjust `MAX_FILES` and
   `MAX_TOTAL_BYTES` in `src/app/api/upload/route.ts`.
+
+## Swapping in your real logo
+
+The header logo is loaded from `public/logo.svg`. To use the actual
+high-resolution Rhythm Productions wordmark:
+
+1. Save it as `public/logo.svg` (same filename, any size — it scales).
+2. Or save as `public/logo.png` and change the `src` in
+   `src/components/Brand.tsx` to `/logo.png`.
+
+The home-screen / PWA icons are `public/icon-192.svg` and
+`public/icon-512.svg`. Replace those with square versions of the mark if
+you have them.
+
+Brand colors live in `tailwind.config.ts`:
+
+- `accent-600` — logo red (`#d9232b`)
+- `brand-500`/`brand-600` — logo grey (used for secondary text)
+- `brand-50`…`brand-200` — light surfaces (backgrounds, cards, borders)
 
 ## Ideas for v2
 
