@@ -29,7 +29,6 @@ function generateVideoThumbnail(file: File): Promise<string | undefined> {
 
     video.onloadeddata = () => {
       try {
-        // Seek a bit in so we don't grab a black frame.
         const seekTo = Math.min(0.1, (video.duration || 1) / 10);
         video.currentTime = seekTo;
       } catch {
@@ -71,14 +70,37 @@ function generateVideoThumbnail(file: File): Promise<string | undefined> {
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+/** Upload a single file to a signed Supabase URL, tracking progress. */
+function uploadFileToSignedUrl(
+  file: File,
+  signedUrl: string,
+  onProgress: (loaded: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', signedUrl);
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (ev) => {
+      if (ev.lengthComputable) onProgress(ev.loaded);
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve();
+      else reject(new Error(`Upload failed (${xhr.status}).`));
+    };
+    xhr.onerror = () => reject(new Error('Network error during file upload.'));
+    xhr.send(file);
+  });
 }
 
 type Status =
   | { state: 'idle' }
   | { state: 'uploading'; progress: number }
-  | { state: 'success'; id: string }
+  | { state: 'success' }
   | { state: 'error'; message: string };
 
 export function UploadForm() {
@@ -90,7 +112,6 @@ export function UploadForm() {
   const [status, setStatus] = useState<Status>({ state: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Revoke object URLs on unmount to avoid leaks.
   useEffect(() => {
     return () => {
       items.forEach((i) => URL.revokeObjectURL(i.previewUrl));
@@ -106,24 +127,22 @@ export function UploadForm() {
       const isImage = file.type.startsWith('image/');
       const isVideo = file.type.startsWith('video/');
       if (!isImage && !isVideo) continue;
-
-      const item: MediaItem = {
+      incoming.push({
         id: uid(),
         file,
         previewUrl: URL.createObjectURL(file),
         kind: isImage ? 'image' : 'video',
-      };
-      incoming.push(item);
+      });
     }
-
     setItems((prev) => [...prev, ...incoming]);
 
-    // Asynchronously generate video thumbnails.
     for (const item of incoming) {
       if (item.kind === 'video') {
         const thumb = await generateVideoThumbnail(item.file);
         setItems((prev) =>
-          prev.map((p) => (p.id === item.id ? { ...p, videoThumbUrl: thumb } : p)),
+          prev.map((p) =>
+            p.id === item.id ? { ...p, videoThumbUrl: thumb } : p,
+          ),
         );
       }
     }
@@ -147,73 +166,105 @@ export function UploadForm() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-
-    const form = new FormData();
-    form.append('clientName', clientName.trim());
-    form.append('clientEmail', clientEmail.trim());
-    form.append('title', title.trim());
-    form.append('description', description.trim());
-    for (const item of items) {
-      form.append('files', item.file, item.file.name);
-    }
-
     setStatus({ state: 'uploading', progress: 0 });
 
     try {
-      // Use XHR to get real upload progress events.
-      const result = await new Promise<{ id: string }>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/upload');
-        xhr.upload.onprogress = (ev) => {
-          if (ev.lengthComputable) {
-            const progress = Math.round((ev.loaded / ev.total) * 100);
-            setStatus({ state: 'uploading', progress });
-          }
-        };
-        xhr.onload = () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              resolve(JSON.parse(xhr.responseText));
-            } catch {
-              reject(new Error('Unexpected response from server.'));
-            }
-          } else {
-            let msg = `Upload failed (${xhr.status}).`;
-            try {
-              const body = JSON.parse(xhr.responseText);
-              if (body?.error) msg = body.error;
-            } catch {}
-            reject(new Error(msg));
-          }
-        };
-        xhr.onerror = () => reject(new Error('Network error. Please try again.'));
-        xhr.send(form);
+      // ── Phase 1: send metadata, get signed upload URLs ──
+      const prepareRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          clientName: clientName.trim(),
+          clientEmail: clientEmail.trim(),
+          title: title.trim(),
+          description: description.trim(),
+          files: items.map((i) => ({
+            name: i.file.name,
+            size: i.file.size,
+            type: i.file.type,
+          })),
+        }),
       });
 
-      setStatus({ state: 'success', id: result.id });
-      // Clean up previews + form.
+      if (!prepareRes.ok) {
+        const body = await prepareRes.json().catch(() => ({}));
+        throw new Error(body.error ?? `Prepare failed (${prepareRes.status}).`);
+      }
+
+      const { submissionId, uploads } = (await prepareRes.json()) as {
+        submissionId: string;
+        uploads: { storedName: string; signedUrl: string }[];
+      };
+
+      // ── Phase 2: upload files directly to Supabase ──
+      // Map storedName → item so we know which file to upload where.
+      // The order matches because the server processes files in the same order.
+      const totalSize = items.reduce((s, i) => s + i.file.size, 0);
+      const perFileLoaded = new Array(uploads.length).fill(0);
+
+      const updateOverallProgress = () => {
+        const loaded = perFileLoaded.reduce((a, b) => a + b, 0);
+        const pct = totalSize > 0 ? Math.round((loaded / totalSize) * 100) : 100;
+        setStatus({ state: 'uploading', progress: Math.min(pct, 99) });
+      };
+
+      // Upload all files concurrently (up to all at once for simplicity;
+      // browsers naturally limit concurrent connections per host).
+      await Promise.all(
+        uploads.map((u, idx) =>
+          uploadFileToSignedUrl(items[idx].file, u.signedUrl, (loaded) => {
+            perFileLoaded[idx] = loaded;
+            updateOverallProgress();
+          }),
+        ),
+      );
+
+      // ── Phase 3: confirm ──
+      const confirmRes = await fetch('/api/upload/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ submissionId }),
+      });
+
+      if (!confirmRes.ok) {
+        const body = await confirmRes.json().catch(() => ({}));
+        throw new Error(body.error ?? 'Confirmation failed.');
+      }
+
+      setStatus({ state: 'success' });
       items.forEach((i) => URL.revokeObjectURL(i.previewUrl));
       setItems([]);
       setTitle('');
       setDescription('');
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Something went wrong.';
+      const message =
+        err instanceof Error ? err.message : 'Something went wrong.';
       setStatus({ state: 'error', message });
     }
   };
+
+  // ── Success screen ──
 
   if (status.state === 'success') {
     return (
       <div className="fade-in-up mx-4 mb-8 rounded-2xl border border-brand-200 bg-white p-6 text-center shadow-card">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent-50 ring-1 ring-accent-200">
-          <svg className="h-7 w-7 text-accent-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            className="h-7 w-7 text-accent-600"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M20 6 9 17l-5-5" />
           </svg>
         </div>
         <h2 className="text-xl font-semibold text-brand-900">Thank you!</h2>
         <p className="mt-2 text-sm text-brand-500">
-          Your files have been delivered to Rhythm Productions. We&apos;ll be
-          in touch soon.
+          Your files have been delivered to Rhythm Productions. We&apos;ll be in
+          touch soon.
         </p>
         <button
           type="button"
@@ -225,6 +276,8 @@ export function UploadForm() {
       </div>
     );
   }
+
+  // ── Upload form ──
 
   return (
     <form onSubmit={submit} className="mx-4 mb-10 flex flex-col gap-5">
@@ -270,7 +323,6 @@ export function UploadForm() {
           className="visually-hidden"
           onChange={(e) => {
             onPick(e.target.files);
-            // Reset so the same file can be re-picked.
             if (e.target) e.target.value = '';
           }}
         />
@@ -280,7 +332,15 @@ export function UploadForm() {
           onClick={() => fileInputRef.current?.click()}
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-brand-300 bg-brand-50 px-4 py-5 text-sm font-medium text-brand-600 transition hover:border-accent-500 hover:bg-accent-50 hover:text-accent-700 active:scale-[0.99]"
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            className="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M12 5v14M5 12h14" />
           </svg>
           {items.length === 0 ? 'Choose photos & videos' : 'Add more'}
@@ -311,14 +371,22 @@ export function UploadForm() {
                       />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-brand-400">
-                        <svg className="h-7 w-7 animate-pulse" viewBox="0 0 24 24" fill="currentColor">
+                        <svg
+                          className="h-7 w-7 animate-pulse"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
                     )}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/15">
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/40">
-                        <svg className="ml-0.5 h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                        <svg
+                          className="ml-0.5 h-5 w-5 text-white"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
                           <path d="M8 5v14l11-7z" />
                         </svg>
                       </div>
@@ -331,7 +399,14 @@ export function UploadForm() {
                   aria-label="Remove"
                   className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent-600 text-white opacity-90 shadow-soft transition hover:bg-accent-500 group-hover:opacity-100"
                 >
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                  <svg
+                    className="h-3.5 w-3.5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
                     <path d="M6 6l12 12M18 6 6 18" />
                   </svg>
                 </button>
@@ -352,7 +427,6 @@ export function UploadForm() {
           placeholder="e.g. Wedding first look"
           className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
         />
-
         <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
           Description / notes
         </label>
@@ -393,7 +467,9 @@ export function UploadForm() {
           disabled={!canSubmit}
           className="flex w-full items-center justify-center gap-2 rounded-full bg-accent-600 px-6 py-3.5 text-base font-semibold text-white shadow-soft transition hover:bg-accent-500 active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-brand-200 disabled:text-brand-400 disabled:shadow-none"
         >
-          {status.state === 'uploading' ? 'Sending…' : 'Send to Rhythm Productions'}
+          {status.state === 'uploading'
+            ? 'Sending…'
+            : 'Send to Rhythm Productions'}
         </button>
       </div>
     </form>

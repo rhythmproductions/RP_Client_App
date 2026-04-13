@@ -1,25 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import crypto from 'node:crypto';
-import {
-  addSubmission,
-  UPLOADS_DIR,
-  type StoredFile,
-  type Submission,
-} from '@/lib/db';
+import { addSubmission, type StoredFile, type Submission } from '@/lib/db';
+import { createSignedUploadUrl } from '@/lib/storage';
 
-// Run on the Node.js runtime so we can write to disk.
 export const runtime = 'nodejs';
-// Don't try to cache/optimize this route.
 export const dynamic = 'force-dynamic';
 
 const MAX_FILES = 50;
-const MAX_TOTAL_BYTES = 500 * 1024 * 1024; // 500 MB per submission
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB per file (Supabase free tier)
+
+type FileInfo = { name: string; size: number; type: string };
 
 function sanitizeFilename(name: string) {
-  // Strip path separators and anything sketchy.
-  const base = path.basename(name);
+  const base = name.split(/[\\/]/).pop() || 'upload';
   return base.replace(/[^\w.\- ]+/g, '_').slice(0, 180);
 }
 
@@ -29,21 +22,34 @@ function kindOf(mime: string): StoredFile['kind'] {
   return 'other';
 }
 
+/**
+ * Phase 1 — client sends text metadata + a list of files (no actual bytes).
+ * We create signed Supabase upload URLs and return them so the client can
+ * upload each file directly to Supabase.
+ */
 export async function POST(req: NextRequest) {
-  let formData: FormData;
+  let body: {
+    clientName?: string;
+    clientEmail?: string;
+    title?: string;
+    description?: string;
+    files?: FileInfo[];
+  };
+
   try {
-    formData = await req.formData();
-  } catch (err) {
+    body = await req.json();
+  } catch {
     return NextResponse.json(
-      { error: 'Invalid form submission.' },
+      { error: 'Invalid request body.' },
       { status: 400 },
     );
   }
 
-  const clientName = String(formData.get('clientName') ?? '').trim();
-  const clientEmail = String(formData.get('clientEmail') ?? '').trim();
-  const title = String(formData.get('title') ?? '').trim();
-  const description = String(formData.get('description') ?? '').trim();
+  const clientName = (body.clientName ?? '').trim();
+  const clientEmail = (body.clientEmail ?? '').trim();
+  const title = (body.title ?? '').trim();
+  const description = (body.description ?? '').trim();
+  const fileInfos = body.files ?? [];
 
   if (!clientName) {
     return NextResponse.json(
@@ -51,93 +57,96 @@ export async function POST(req: NextRequest) {
       { status: 400 },
     );
   }
-
-  const files = formData.getAll('files').filter((f): f is File => f instanceof File);
-  if (files.length === 0) {
+  if (fileInfos.length === 0) {
     return NextResponse.json(
       { error: 'Please choose at least one file.' },
       { status: 400 },
     );
   }
-  if (files.length > MAX_FILES) {
+  if (fileInfos.length > MAX_FILES) {
     return NextResponse.json(
       { error: `Please upload at most ${MAX_FILES} files at a time.` },
       { status: 400 },
     );
   }
 
-  const totalBytes = files.reduce((acc, f) => acc + f.size, 0);
-  if (totalBytes > MAX_TOTAL_BYTES) {
+  // Filter to only image/video and validate sizes.
+  const validFiles: (FileInfo & { kind: StoredFile['kind'] })[] = [];
+  for (const f of fileInfos) {
+    const kind = kindOf(f.type || '');
+    if (kind === 'other') continue;
+    if (f.size > MAX_FILE_BYTES) {
+      return NextResponse.json(
+        {
+          error: `File "${f.name}" is too large (${Math.round(
+            f.size / (1024 * 1024),
+          )} MB). Max ${Math.round(MAX_FILE_BYTES / (1024 * 1024))} MB per file.`,
+        },
+        { status: 413 },
+      );
+    }
+    validFiles.push({ ...f, kind });
+  }
+
+  if (validFiles.length === 0) {
     return NextResponse.json(
-      {
-        error: `Submission too large. Max ${Math.round(
-          MAX_TOTAL_BYTES / (1024 * 1024),
-        )} MB per upload.`,
-      },
-      { status: 413 },
+      { error: 'No valid photo or video files were found.' },
+      { status: 400 },
     );
   }
 
   const submissionId = crypto.randomUUID();
-  const submissionDir = path.join(UPLOADS_DIR, submissionId);
-  await fs.mkdir(submissionDir, { recursive: true });
-
-  const stored: StoredFile[] = [];
+  const storedFiles: StoredFile[] = [];
+  const uploads: { storedName: string; signedUrl: string }[] = [];
 
   try {
-    for (const file of files) {
-      const mime = file.type || 'application/octet-stream';
-      const kind = kindOf(mime);
-      if (kind === 'other') {
-        // Skip non-media files silently for safety.
-        continue;
-      }
-
-      const safeName = sanitizeFilename(file.name || 'upload');
+    for (const f of validFiles) {
+      const safeName = sanitizeFilename(f.name);
       const storedName = `${crypto.randomUUID()}-${safeName}`;
-      const destPath = path.join(submissionDir, storedName);
+      const storagePath = `${submissionId}/${storedName}`;
+      const signedUrl = await createSignedUploadUrl(storagePath);
 
-      const buf = Buffer.from(await file.arrayBuffer());
-      await fs.writeFile(destPath, buf);
-
-      stored.push({
-        originalName: file.name,
+      storedFiles.push({
+        originalName: f.name,
         storedName,
-        mimeType: mime,
-        size: file.size,
-        kind,
+        mimeType: f.type || 'application/octet-stream',
+        size: f.size,
+        kind: f.kind,
       });
+      uploads.push({ storedName, signedUrl });
     }
-
-    if (stored.length === 0) {
-      // Clean up empty dir.
-      await fs.rm(submissionDir, { recursive: true, force: true });
-      return NextResponse.json(
-        { error: 'No valid photo or video files were found.' },
-        { status: 400 },
-      );
-    }
-
-    const submission: Submission = {
-      id: submissionId,
-      createdAt: new Date().toISOString(),
-      clientName,
-      clientEmail: clientEmail || undefined,
-      title: title || undefined,
-      description: description || undefined,
-      files: stored,
-    };
-
-    await addSubmission(submission);
-
-    return NextResponse.json({ id: submissionId }, { status: 201 });
   } catch (err) {
-    console.error('Upload failed:', err);
-    // Best-effort cleanup.
-    await fs.rm(submissionDir, { recursive: true, force: true }).catch(() => {});
+    console.error('Failed to create upload URLs:', err);
     return NextResponse.json(
-      { error: 'The server could not save your upload. Please try again.' },
+      { error: 'Could not prepare upload. Please try again.' },
       { status: 500 },
     );
   }
+
+  // Store submission metadata as pending.
+  const submission: Submission = {
+    id: submissionId,
+    createdAt: new Date().toISOString(),
+    clientName,
+    clientEmail: clientEmail || undefined,
+    title: title || undefined,
+    description: description || undefined,
+    files: storedFiles,
+    status: 'pending',
+  };
+
+  try {
+    await addSubmission(submission);
+  } catch (err) {
+    console.error('Failed to save submission metadata:', err);
+    return NextResponse.json(
+      { error: 'Could not save submission. Please try again.' },
+      { status: 500 },
+    );
+  }
+
+  return NextResponse.json(
+    { submissionId, uploads },
+    { status: 201 },
+  );
 }

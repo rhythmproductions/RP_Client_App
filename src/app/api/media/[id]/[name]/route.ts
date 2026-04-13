@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import { UPLOADS_DIR, findSubmission } from '@/lib/db';
+import { findSubmission } from '@/lib/db';
+import { createSignedDownloadUrl } from '@/lib/storage';
 import { requireAdmin } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+/**
+ * Generates a signed Supabase download URL for the requested file and
+ * redirects the browser to it. This avoids proxying potentially large
+ * files through the serverless function.
+ */
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string; name: string } },
@@ -25,27 +29,12 @@ export async function GET(
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  // Guard against path traversal.
-  const safeName = path.basename(fileMeta.storedName);
-  const filePath = path.join(UPLOADS_DIR, submission.id, safeName);
-  if (!filePath.startsWith(UPLOADS_DIR)) {
-    return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
-  }
-
   try {
-    const buf = await fs.readFile(filePath);
-    return new NextResponse(buf, {
-      status: 200,
-      headers: {
-        'Content-Type': fileMeta.mimeType,
-        'Content-Length': String(buf.byteLength),
-        'Cache-Control': 'private, max-age=60',
-        'Content-Disposition': `inline; filename="${encodeURIComponent(
-          fileMeta.originalName,
-        )}"`,
-      },
-    });
-  } catch {
-    return NextResponse.json({ error: 'File missing.' }, { status: 404 });
+    const storagePath = `${submission.id}/${fileMeta.storedName}`;
+    const downloadUrl = await createSignedDownloadUrl(storagePath);
+    return NextResponse.redirect(downloadUrl, 302);
+  } catch (err) {
+    console.error('Failed to create download URL:', err);
+    return NextResponse.json({ error: 'File unavailable.' }, { status: 500 });
   }
 }
