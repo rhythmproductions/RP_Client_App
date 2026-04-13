@@ -36,6 +36,21 @@ export async function createSignedUploadUrl(
 }
 
 /**
+ * Delete all files for a submission from Supabase Storage.
+ */
+export async function deleteSubmissionFiles(
+  submissionId: string,
+  storedNames: string[],
+): Promise<void> {
+  const supabase = getSupabase();
+  const paths = storedNames.map((name) => `${submissionId}/${name}`);
+  const { error } = await supabase.storage.from(BUCKET).remove(paths);
+  if (error) {
+    throw new Error(`Failed to delete files: ${error.message}`);
+  }
+}
+
+/**
  * Generate a signed download URL for the admin to view a file.
  * Valid for 1 hour.
  */

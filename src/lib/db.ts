@@ -51,6 +51,14 @@ export async function updateSubmission(
   return updated;
 }
 
+export async function deleteSubmission(id: string): Promise<boolean> {
+  const store = getSubmissionsStore();
+  const existing = await findSubmission(id);
+  if (!existing) return false;
+  await store.delete(id);
+  return true;
+}
+
 export async function listSubmissions(): Promise<Submission[]> {
   const store = getSubmissionsStore();
   const { blobs } = await store.list();

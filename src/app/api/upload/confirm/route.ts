@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findSubmission, updateSubmission } from '@/lib/db';
+import { notifyNewSubmission } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  await updateSubmission(submissionId, { status: 'complete' });
+  const updated = await updateSubmission(submissionId, { status: 'complete' });
+
+  // Send notification email (non-blocking — don't fail the request if email fails).
+  if (updated) {
+    notifyNewSubmission(updated).catch((err) =>
+      console.error('Email notification failed:', err),
+    );
+  }
+
   return NextResponse.json({ ok: true }, { status: 200 });
 }
