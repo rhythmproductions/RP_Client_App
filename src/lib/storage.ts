@@ -52,15 +52,17 @@ export async function deleteSubmissionFiles(
 
 /**
  * Generate a signed download URL for the admin to view a file.
- * Valid for 1 hour.
+ * Valid for 1 hour. When `forceDownload` is set, the browser will
+ * download the file instead of displaying it inline.
  */
 export async function createSignedDownloadUrl(
   storagePath: string,
+  forceDownload?: string,
 ): Promise<string> {
   const supabase = getSupabase();
   const { data, error } = await supabase.storage
     .from(BUCKET)
-    .createSignedUrl(storagePath, 60 * 60);
+    .createSignedUrl(storagePath, 60 * 60, forceDownload ? { download: forceDownload } : undefined);
 
   if (error || !data?.signedUrl) {
     throw new Error(

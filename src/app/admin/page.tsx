@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Brand } from '@/components/Brand';
 import { AdminLoginForm, AdminSignOutButton } from '@/components/AdminLoginForm';
-import { DeleteButton, DownloadAllButton } from '@/components/AdminActions';
+import { DeleteButton, DownloadAllButton, FileDownloadButton } from '@/components/AdminActions';
 import { listSubmissions } from '@/lib/db';
 import { ADMIN_COOKIE_NAME, isAdminCookieValid, getAdminPassword } from '@/lib/auth';
 
@@ -141,6 +141,7 @@ export default async function AdminPage() {
                             </span>
                           </div>
                         )}
+                        <FileDownloadButton submissionId={s.id} storedName={f.storedName} />
                       </Link>
                     );
                   })}

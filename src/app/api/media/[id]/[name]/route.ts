@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Generates a signed Supabase download URL for the requested file and
- * redirects the browser to it. This avoids proxying potentially large
- * files through the serverless function.
+ * redirects the browser to it. Add ?download=1 to force the browser
+ * to download instead of displaying inline.
  */
 export async function GET(
   req: NextRequest,
@@ -31,7 +31,11 @@ export async function GET(
 
   try {
     const storagePath = `${submission.id}/${fileMeta.storedName}`;
-    const downloadUrl = await createSignedDownloadUrl(storagePath);
+    const wantDownload = req.nextUrl.searchParams.get('download') === '1';
+    const downloadUrl = await createSignedDownloadUrl(
+      storagePath,
+      wantDownload ? fileMeta.originalName : undefined,
+    );
     return NextResponse.redirect(downloadUrl, 302);
   } catch (err) {
     console.error('Failed to create download URL:', err);
