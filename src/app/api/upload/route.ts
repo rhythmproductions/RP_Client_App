@@ -116,9 +116,10 @@ export async function POST(req: NextRequest) {
       uploads.push({ storedName, signedUrl });
     }
   } catch (err) {
-    console.error('Failed to create upload URLs:', err);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('Failed to create upload URLs:', detail, err);
     return NextResponse.json(
-      { error: 'Could not prepare upload. Please try again.' },
+      { error: `Could not prepare upload: ${detail}` },
       { status: 500 },
     );
   }
@@ -138,9 +139,10 @@ export async function POST(req: NextRequest) {
   try {
     await addSubmission(submission);
   } catch (err) {
-    console.error('Failed to save submission metadata:', err);
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error('Failed to save submission metadata:', detail, err);
     return NextResponse.json(
-      { error: 'Could not save submission. Please try again.' },
+      { error: `Could not save submission: ${detail}` },
       { status: 500 },
     );
   }
