@@ -79,7 +79,7 @@ export async function notifyNewSubmission(sub: Submission): Promise<void> {
   `.trim();
 
   try {
-    await resend.emails.send({
+    const result = await resend.emails.send({
       from: 'Rhythm Productions <onboarding@resend.dev>',
       to: [NOTIFY_TO],
       subject,
