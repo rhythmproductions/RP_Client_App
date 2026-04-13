@@ -44,12 +44,19 @@ export async function POST(req: NextRequest) {
 
   const updated = await updateSubmission(submissionId, { status: 'complete' });
 
-  // Send notification email (non-blocking — don't fail the request if email fails).
+  // Send notification email — await it so the serverless function
+  // doesn't exit before the email is sent.
+  let emailStatus = 'skipped';
   if (updated) {
-    notifyNewSubmission(updated).catch((err) =>
-      console.error('Email notification failed:', err),
-    );
+    try {
+      await notifyNewSubmission(updated);
+      emailStatus = 'sent';
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('Email notification failed:', detail);
+      emailStatus = `failed: ${detail}`;
+    }
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json({ ok: true, emailStatus }, { status: 200 });
 }

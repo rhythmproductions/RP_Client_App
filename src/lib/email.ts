@@ -85,7 +85,12 @@ export async function notifyNewSubmission(sub: Submission): Promise<void> {
       subject,
       html,
     });
+
+    if (result.error) {
+      throw new Error(`Resend API error: ${JSON.stringify(result.error)}`);
+    }
   } catch (err) {
     console.error('Failed to send notification email:', err);
+    throw err;
   }
 }
