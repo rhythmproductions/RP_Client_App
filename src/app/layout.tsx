@@ -37,14 +37,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Oswald:ital,wght@0,700;1,700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
       <body className="min-h-screen bg-gradient-to-b from-white via-brand-50 to-brand-100 text-brand-900 antialiased">
         <div className="mx-auto flex min-h-screen w-full max-w-xl flex-col pt-safe pb-safe">
           {children}
