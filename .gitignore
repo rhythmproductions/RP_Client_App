@@ -39,3 +39,4 @@ next-env.d.ts
 # uploaded client media + database (runtime data)
 /data/uploads/
 /data/db.json
+deploy-*.zip
