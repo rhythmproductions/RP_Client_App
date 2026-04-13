@@ -14,10 +14,9 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },
+      { url: '/FaviconLogo.jpg', type: 'image/jpeg' },
     ],
-    apple: [{ url: '/icon-192.svg', sizes: '192x192', type: 'image/svg+xml' }],
+    apple: [{ url: '/FaviconLogo.jpg', type: 'image/jpeg' }],
   },
 };
 
