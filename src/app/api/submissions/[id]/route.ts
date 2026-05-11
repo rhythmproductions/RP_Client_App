@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { findSubmission, deleteSubmission } from '@/lib/db';
-import { deleteSubmissionFiles } from '@/lib/storage';
+import { deleteDriveFile } from '@/lib/storage';
 import { requireAdmin } from '@/lib/auth';
 
 export const runtime = 'nodejs';
@@ -8,8 +8,8 @@ export const dynamic = 'force-dynamic';
 
 /**
  * DELETE /api/submissions/[id]
- * Deletes a submission's metadata from Netlify Blobs and all its
- * files from Supabase Storage. Requires admin auth.
+ * Removes a submission's metadata from Netlify Blobs and all of its
+ * files from Google Drive. Requires admin auth.
  */
 export async function DELETE(
   req: NextRequest,
@@ -23,16 +23,23 @@ export async function DELETE(
     return NextResponse.json({ error: 'Not found.' }, { status: 404 });
   }
 
-  try {
-    // Delete files from Supabase Storage.
-    const storedNames = submission.files.map((f) => f.storedName);
-    await deleteSubmissionFiles(submission.id, storedNames);
-  } catch (err) {
-    console.error('Failed to delete files from storage:', err);
-    // Continue to delete metadata even if storage deletion fails.
-  }
+  // Delete each file from Drive. Run in parallel; ignore individual
+  // failures (a missing file shouldn't block deleting the metadata).
+  await Promise.all(
+    submission.files
+      .filter((f) => !!f.driveFileId)
+      .map(async (f) => {
+        try {
+          await deleteDriveFile(f.driveFileId!);
+        } catch (err) {
+          console.error(
+            `Failed to delete Drive file ${f.driveFileId} (${f.storedName}):`,
+            err,
+          );
+        }
+      }),
+  );
 
-  // Delete metadata from Netlify Blobs.
   await deleteSubmission(params.id);
 
   return NextResponse.json({ ok: true });

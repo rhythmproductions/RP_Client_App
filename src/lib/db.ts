@@ -8,6 +8,8 @@ export type StoredFile = {
   mimeType: string;
   size: number;
   kind: 'image' | 'video' | 'other';
+  // Set once the client finishes uploading the file to Google Drive.
+  driveFileId?: string;
 };
 
 export type Submission = {

@@ -5,13 +5,16 @@ import { notifyNewSubmission } from '@/lib/email';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+type FileResult = { storedName: string; driveFileId: string };
+
 /**
- * Phase 2 — client calls this after all files have been uploaded directly
- * to Supabase. We mark the submission as complete so it appears on the
- * admin page.
+ * Phase 2 — client calls this after all files have finished uploading
+ * directly to Google Drive. The client tells us the Drive fileId it
+ * received for each upload; we attach those to the submission metadata
+ * and mark it complete.
  */
 export async function POST(req: NextRequest) {
-  let body: { submissionId?: string };
+  let body: { submissionId?: string; files?: FileResult[] };
 
   try {
     body = await req.json();
@@ -23,6 +26,7 @@ export async function POST(req: NextRequest) {
   }
 
   const submissionId = (body.submissionId ?? '').trim();
+  const fileResults = Array.isArray(body.files) ? body.files : [];
   if (!submissionId) {
     return NextResponse.json(
       { error: 'Missing submissionId.' },
@@ -42,10 +46,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const updated = await updateSubmission(submissionId, { status: 'complete' });
+  // Merge driveFileId into each StoredFile by matching on storedName.
+  const idByName = new Map(
+    fileResults
+      .filter((r) => r && r.storedName && r.driveFileId)
+      .map((r) => [r.storedName, r.driveFileId] as const),
+  );
 
-  // Send notification email — await it so the serverless function
-  // doesn't exit before the email is sent.
+  const updatedFiles = existing.files.map((f) => {
+    const driveFileId = idByName.get(f.storedName);
+    return driveFileId ? { ...f, driveFileId } : f;
+  });
+
+  const missing = updatedFiles.filter((f) => !f.driveFileId);
+  if (missing.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Some files were not reported as uploaded (${missing.length}/${updatedFiles.length}).`,
+      },
+      { status: 400 },
+    );
+  }
+
+  const updated = await updateSubmission(submissionId, {
+    files: updatedFiles,
+    status: 'complete',
+  });
+
   let emailStatus = 'skipped';
   if (updated) {
     try {

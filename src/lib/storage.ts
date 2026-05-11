@@ -1,73 +1,134 @@
-import { createClient } from '@supabase/supabase-js';
+import { google, drive_v3 } from 'googleapis';
 
-const BUCKET = 'uploads';
+// ── Config ──────────────────────────────────────────────────────────
 
-function getSupabase() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive';
+
+function readEnv(): { keyJson: string; sharedDriveId: string } {
+  const keyJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY;
+  const sharedDriveId = process.env.GOOGLE_SHARED_DRIVE_ID;
+  if (!keyJson) {
+    throw new Error('Missing GOOGLE_SERVICE_ACCOUNT_KEY environment variable.');
+  }
+  if (!sharedDriveId) {
+    throw new Error('Missing GOOGLE_SHARED_DRIVE_ID environment variable.');
+  }
+  return { keyJson, sharedDriveId };
+}
+
+function parseKey(keyJson: string): { client_email: string; private_key: string } {
+  let parsed: { client_email?: string; private_key?: string };
+  try {
+    parsed = JSON.parse(keyJson);
+  } catch {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_KEY is not valid JSON.');
+  }
+  if (!parsed.client_email || !parsed.private_key) {
     throw new Error(
-      'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variable.',
+      'GOOGLE_SERVICE_ACCOUNT_KEY is missing client_email or private_key.',
     );
   }
-  return createClient(url, key, {
-    auth: { persistSession: false },
+  // Netlify env vars often arrive with literal "\n" sequences instead of
+  // actual newlines — normalise so the PEM parser is happy.
+  return {
+    client_email: parsed.client_email,
+    private_key: parsed.private_key.replace(/\\n/g, '\n'),
+  };
+}
+
+function getAuth() {
+  const { keyJson } = readEnv();
+  const { client_email, private_key } = parseKey(keyJson);
+  return new google.auth.JWT({
+    email: client_email,
+    key: private_key,
+    scopes: [DRIVE_SCOPE],
   });
 }
 
-/**
- * Generate a signed URL that the client can PUT a file to directly.
- * The URL is valid for 10 minutes.
- */
-export async function createSignedUploadUrl(
-  storagePath: string,
-): Promise<string> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUploadUrl(storagePath);
-
-  if (error || !data?.signedUrl) {
-    throw new Error(
-      `Failed to create upload URL: ${error?.message ?? 'unknown error'}`,
-    );
-  }
-  return data.signedUrl;
+function getDrive(): drive_v3.Drive {
+  return google.drive({ version: 'v3', auth: getAuth() });
 }
 
+// ── Resumable upload session ────────────────────────────────────────
+
 /**
- * Delete all files for a submission from Supabase Storage.
+ * Create a Google Drive resumable upload session.
+ *
+ * Returns a session URI that the client browser can PUT the file bytes
+ * directly to, bypassing the Netlify Function (which would otherwise
+ * cap the request body at ~6 MB).
  */
-export async function deleteSubmissionFiles(
-  submissionId: string,
-  storedNames: string[],
-): Promise<void> {
-  const supabase = getSupabase();
-  const paths = storedNames.map((name) => `${submissionId}/${name}`);
-  const { error } = await supabase.storage.from(BUCKET).remove(paths);
-  if (error) {
-    throw new Error(`Failed to delete files: ${error.message}`);
+export async function createResumableUploadSession(args: {
+  filename: string;
+  mimeType: string;
+  size: number;
+}): Promise<string> {
+  const { sharedDriveId } = readEnv();
+  const auth = getAuth();
+  const { token } = await auth.getAccessToken();
+  if (!token) {
+    throw new Error('Failed to obtain Google access token.');
   }
-}
 
-/**
- * Generate a signed download URL for the admin to view a file.
- * Valid for 1 hour. When `forceDownload` is set, the browser will
- * download the file instead of displaying it inline.
- */
-export async function createSignedDownloadUrl(
-  storagePath: string,
-  forceDownload?: string,
-): Promise<string> {
-  const supabase = getSupabase();
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(storagePath, 60 * 60, forceDownload ? { download: forceDownload } : undefined);
+  const metadata = {
+    name: args.filename,
+    parents: [sharedDriveId],
+  };
 
-  if (error || !data?.signedUrl) {
+  const res = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true',
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-Upload-Content-Type': args.mimeType,
+        'X-Upload-Content-Length': String(args.size),
+      },
+      body: JSON.stringify(metadata),
+    },
+  );
+
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
     throw new Error(
-      `Failed to create download URL: ${error?.message ?? 'unknown error'}`,
+      `Drive resumable session failed (${res.status}): ${detail || res.statusText}`,
     );
   }
-  return data.signedUrl;
+
+  const sessionUri = res.headers.get('location');
+  if (!sessionUri) {
+    throw new Error('Drive did not return a session URI.');
+  }
+  return sessionUri;
+}
+
+// ── Download / delete ────────────────────────────────────────────────
+
+/**
+ * Stream a file's bytes from Drive. Use the returned stream as the body
+ * of a Response.
+ */
+export async function getFileStream(
+  driveFileId: string,
+): Promise<NodeJS.ReadableStream> {
+  const drive = getDrive();
+  const res = await drive.files.get(
+    {
+      fileId: driveFileId,
+      alt: 'media',
+      supportsAllDrives: true,
+    },
+    { responseType: 'stream' },
+  );
+  return res.data;
+}
+
+export async function deleteDriveFile(driveFileId: string): Promise<void> {
+  const drive = getDrive();
+  await drive.files.delete({
+    fileId: driveFileId,
+    supportsAllDrives: true,
+  });
 }

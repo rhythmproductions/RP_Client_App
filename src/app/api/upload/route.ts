@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { addSubmission, type StoredFile, type Submission } from '@/lib/db';
-import { createSignedUploadUrl } from '@/lib/storage';
+import { createResumableUploadSession } from '@/lib/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_FILES = 50;
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB per file (Supabase free tier)
+const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB per file
 
 type FileInfo = { name: string; size: number; type: string };
 
@@ -24,8 +24,9 @@ function kindOf(mime: string): StoredFile['kind'] {
 
 /**
  * Phase 1 — client sends text metadata + a list of files (no actual bytes).
- * We create signed Supabase upload URLs and return them so the client can
- * upload each file directly to Supabase.
+ * We create a Google Drive resumable upload session per file and return
+ * the session URIs so the client can PUT each file's bytes directly to
+ * Google Drive.
  */
 export async function POST(req: NextRequest) {
   let body: {
@@ -97,14 +98,19 @@ export async function POST(req: NextRequest) {
 
   const submissionId = crypto.randomUUID();
   const storedFiles: StoredFile[] = [];
-  const uploads: { storedName: string; signedUrl: string }[] = [];
+  const uploads: { storedName: string; sessionUri: string }[] = [];
 
   try {
     for (const f of validFiles) {
       const safeName = sanitizeFilename(f.name);
-      const storedName = `${crypto.randomUUID()}-${safeName}`;
-      const storagePath = `${submissionId}/${storedName}`;
-      const signedUrl = await createSignedUploadUrl(storagePath);
+      // Prefix with submission id + uuid so files are unique inside the
+      // Shared Drive even if two clients send identical filenames.
+      const storedName = `${submissionId}__${crypto.randomUUID()}__${safeName}`;
+      const sessionUri = await createResumableUploadSession({
+        filename: storedName,
+        mimeType: f.type || 'application/octet-stream',
+        size: f.size,
+      });
 
       storedFiles.push({
         originalName: f.name,
@@ -113,18 +119,20 @@ export async function POST(req: NextRequest) {
         size: f.size,
         kind: f.kind,
       });
-      uploads.push({ storedName, signedUrl });
+      uploads.push({ storedName, sessionUri });
     }
   } catch (err) {
     const detail = err instanceof Error ? err.message : String(err);
-    console.error('Failed to create upload URLs:', detail, err);
+    console.error('Failed to create upload sessions:', detail, err);
     return NextResponse.json(
       { error: `Could not prepare upload: ${detail}` },
       { status: 500 },
     );
   }
 
-  // Store submission metadata as pending.
+  // Store submission metadata as pending. driveFileId on each file is
+  // filled in by /api/upload/confirm once the client has finished
+  // uploading.
   const submission: Submission = {
     id: submissionId,
     createdAt: new Date().toISOString(),

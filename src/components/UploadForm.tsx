@@ -75,22 +75,39 @@ function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-/** Upload a single file to a signed Supabase URL, tracking progress. */
-function uploadFileToSignedUrl(
+/**
+ * Upload a single file to a Google Drive resumable-upload session URI
+ * in one PUT, tracking progress. Returns the Drive fileId.
+ */
+function uploadFileToDriveSession(
   file: File,
-  signedUrl: string,
+  sessionUri: string,
   onProgress: (loaded: number) => void,
-): Promise<void> {
+): Promise<string> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open('PUT', signedUrl);
+    xhr.open('PUT', sessionUri);
+    // The session was created with the file's content type already, but
+    // sending it again on the PUT is harmless and clearer.
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
     xhr.upload.onprogress = (ev) => {
       if (ev.lengthComputable) onProgress(ev.loaded);
     };
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Upload failed (${xhr.status}).`));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const body = JSON.parse(xhr.responseText) as { id?: string };
+          if (!body.id) {
+            reject(new Error('Drive did not return a file id.'));
+            return;
+          }
+          resolve(body.id);
+        } catch {
+          reject(new Error('Could not parse Drive response.'));
+        }
+      } else {
+        reject(new Error(`Upload failed (${xhr.status}).`));
+      }
     };
     xhr.onerror = () => reject(new Error('Network error during file upload.'));
     xhr.send(file);
@@ -193,12 +210,12 @@ export function UploadForm() {
 
       const { submissionId, uploads } = (await prepareRes.json()) as {
         submissionId: string;
-        uploads: { storedName: string; signedUrl: string }[];
+        uploads: { storedName: string; sessionUri: string }[];
       };
 
-      // ── Phase 2: upload files directly to Supabase ──
-      // Map storedName → item so we know which file to upload where.
-      // The order matches because the server processes files in the same order.
+      // ── Phase 2: upload files directly to Google Drive ──
+      // Order matches because the server processes files in the same order
+      // as the request.
       const totalSize = items.reduce((s, i) => s + i.file.size, 0);
       const perFileLoaded = new Array(uploads.length).fill(0);
 
@@ -208,11 +225,9 @@ export function UploadForm() {
         setStatus({ state: 'uploading', progress: Math.min(pct, 99) });
       };
 
-      // Upload all files concurrently (up to all at once for simplicity;
-      // browsers naturally limit concurrent connections per host).
-      await Promise.all(
+      const driveFileIds = await Promise.all(
         uploads.map((u, idx) =>
-          uploadFileToSignedUrl(items[idx].file, u.signedUrl, (loaded) => {
+          uploadFileToDriveSession(items[idx].file, u.sessionUri, (loaded) => {
             perFileLoaded[idx] = loaded;
             updateOverallProgress();
           }),
@@ -223,7 +238,13 @@ export function UploadForm() {
       const confirmRes = await fetch('/api/upload/confirm', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionId }),
+        body: JSON.stringify({
+          submissionId,
+          files: uploads.map((u, idx) => ({
+            storedName: u.storedName,
+            driveFileId: driveFileIds[idx],
+          })),
+        }),
       });
 
       if (!confirmRes.ok) {
