@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_FILES = 50;
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB per file
+const MAX_FILE_BYTES = 2 * 1024 * 1024 * 1024; // 2 GB per file
 
 type FileInfo = { name: string; size: number; type: string };
 

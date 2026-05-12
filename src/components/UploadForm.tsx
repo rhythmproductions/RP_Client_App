@@ -445,7 +445,7 @@ export function UploadForm() {
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Wedding first look"
+          placeholder="e.g. Site walkthrough — drone footage"
           className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
         />
         <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
