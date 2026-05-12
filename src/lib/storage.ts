@@ -58,11 +58,16 @@ function getDrive(): drive_v3.Drive {
  * Returns a session URI that the client browser can PUT the file bytes
  * directly to, bypassing the Netlify Function (which would otherwise
  * cap the request body at ~6 MB).
+ *
+ * `origin` must be the exact browser origin that will issue the PUT —
+ * Drive binds CORS support on the session URI to whatever Origin we
+ * pass in this initial request.
  */
 export async function createResumableUploadSession(args: {
   filename: string;
   mimeType: string;
   size: number;
+  origin: string;
 }): Promise<string> {
   const { sharedDriveId } = readEnv();
   const auth = getAuth();
@@ -85,6 +90,7 @@ export async function createResumableUploadSession(args: {
         'Content-Type': 'application/json; charset=UTF-8',
         'X-Upload-Content-Type': args.mimeType,
         'X-Upload-Content-Length': String(args.size),
+        Origin: args.origin,
       },
       body: JSON.stringify(metadata),
     },

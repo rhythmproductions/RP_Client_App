@@ -100,6 +100,10 @@ export async function POST(req: NextRequest) {
   const storedFiles: StoredFile[] = [];
   const uploads: { storedName: string; sessionUri: string }[] = [];
 
+  // Drive binds CORS on the session URI to whatever Origin we pass in
+  // the initial POST, so use the exact origin the browser is on.
+  const origin = req.headers.get('origin') ?? req.nextUrl.origin;
+
   try {
     for (const f of validFiles) {
       const safeName = sanitizeFilename(f.name);
@@ -110,6 +114,7 @@ export async function POST(req: NextRequest) {
         filename: storedName,
         mimeType: f.type || 'application/octet-stream',
         size: f.size,
+        origin,
       });
 
       storedFiles.push({
