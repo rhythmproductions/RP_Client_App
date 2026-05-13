@@ -38,7 +38,9 @@ export async function notifyNewSubmission(sub: Submission): Promise<void> {
 
   const adminUrl = `${process.env.URL ?? 'https://rp-client-upload.netlify.app'}/admin`;
 
-  const subject = `New upload from ${sub.clientName}${sub.title ? ` — ${sub.title}` : ''}`;
+  const subject = `New upload from ${sub.clientName}${sub.projectName ? ` — ${sub.projectName}` : ''}`;
+
+  const annotatedFiles = sub.files.filter((f) => f.title || f.notes);
 
   const html = `
     <div style="font-family: -apple-system, system-ui, sans-serif; max-width: 520px; margin: 0 auto;">
@@ -54,19 +56,26 @@ export async function notifyNewSubmission(sub: Submission): Promise<void> {
           <td style="padding: 8px 0; color: #71717a;">Email</td>
           <td style="padding: 8px 0;"><a href="mailto:${sub.clientEmail}" style="color: #D9232B;">${sub.clientEmail}</a></td>
         </tr>` : ''}
-        ${sub.title ? `<tr>
-          <td style="padding: 8px 0; color: #71717a;">Title</td>
-          <td style="padding: 8px 0;">${sub.title}</td>
-        </tr>` : ''}
-        ${sub.description ? `<tr>
-          <td style="padding: 8px 0; color: #71717a;">Notes</td>
-          <td style="padding: 8px 0;">${sub.description}</td>
+        ${sub.projectName ? `<tr>
+          <td style="padding: 8px 0; color: #71717a;">Project</td>
+          <td style="padding: 8px 0;">${sub.projectName}</td>
         </tr>` : ''}
         <tr>
           <td style="padding: 8px 0; color: #71717a;">Files</td>
           <td style="padding: 8px 0;">${fileSummary} (${formatBytes(totalSize)})</td>
         </tr>
       </table>
+
+      ${annotatedFiles.length > 0 ? `
+        <h3 style="color: #27272a; margin-top: 24px; margin-bottom: 8px; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em;">File notes</h3>
+        <ul style="margin: 0 0 16px 0; padding-left: 18px; color: #3f3f46; font-size: 14px;">
+          ${annotatedFiles.map((f) => `
+            <li style="margin: 6px 0;">
+              <strong>${f.title || f.originalName}</strong>${f.notes ? ` — ${f.notes}` : ''}
+            </li>
+          `).join('')}
+        </ul>
+      ` : ''}
 
       <a href="${adminUrl}" style="display: inline-block; background: #D9232B; color: white; padding: 10px 24px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">
         View in Dashboard

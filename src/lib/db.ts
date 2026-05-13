@@ -10,6 +10,10 @@ export type StoredFile = {
   kind: 'image' | 'video' | 'other';
   // Set once the client finishes uploading the file to Google Drive.
   driveFileId?: string;
+  // Per-file metadata the client can attach (subject/name/type/number,
+  // plus any notes about that specific file).
+  title?: string;
+  notes?: string;
 };
 
 export type Submission = {
@@ -17,8 +21,8 @@ export type Submission = {
   createdAt: string; // ISO
   clientName: string;
   clientEmail?: string;
-  title?: string;
-  description?: string;
+  // Overall project name / shoot date. Optional.
+  projectName?: string;
   files: StoredFile[];
   status: 'pending' | 'complete';
 };

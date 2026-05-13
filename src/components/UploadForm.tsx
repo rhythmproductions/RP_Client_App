@@ -8,6 +8,8 @@ type MediaItem = {
   previewUrl: string;
   kind: 'image' | 'video';
   videoThumbUrl?: string;
+  title: string;
+  notes: string;
 };
 
 function uid() {
@@ -87,8 +89,6 @@ function uploadFileToDriveSession(
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open('PUT', sessionUri);
-    // The session was created with the file's content type already, but
-    // sending it again on the PUT is harmless and clearer.
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
     xhr.upload.onprogress = (ev) => {
       if (ev.lengthComputable) onProgress(ev.loaded);
@@ -123,8 +123,7 @@ type Status =
 export function UploadForm() {
   const [clientName, setClientName] = useState('');
   const [clientEmail, setClientEmail] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [projectName, setProjectName] = useState('');
   const [items, setItems] = useState<MediaItem[]>([]);
   const [status, setStatus] = useState<Status>({ state: 'idle' });
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,6 +148,8 @@ export function UploadForm() {
         file,
         previewUrl: URL.createObjectURL(file),
         kind: isImage ? 'image' : 'video',
+        title: '',
+        notes: '',
       });
     }
     setItems((prev) => [...prev, ...incoming]);
@@ -164,6 +165,10 @@ export function UploadForm() {
       }
     }
   }, []);
+
+  const updateItem = (id: string, patch: Partial<MediaItem>) => {
+    setItems((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  };
 
   const removeItem = (id: string) => {
     setItems((prev) => {
@@ -186,19 +191,20 @@ export function UploadForm() {
     setStatus({ state: 'uploading', progress: 0 });
 
     try {
-      // ── Phase 1: send metadata, get signed upload URLs ──
+      // ── Phase 1: send metadata, get Drive upload session URIs ──
       const prepareRes = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           clientName: clientName.trim(),
           clientEmail: clientEmail.trim(),
-          title: title.trim(),
-          description: description.trim(),
+          projectName: projectName.trim(),
           files: items.map((i) => ({
             name: i.file.name,
             size: i.file.size,
             type: i.file.type,
+            title: i.title.trim(),
+            notes: i.notes.trim(),
           })),
         }),
       });
@@ -214,8 +220,6 @@ export function UploadForm() {
       };
 
       // ── Phase 2: upload files directly to Google Drive ──
-      // Order matches because the server processes files in the same order
-      // as the request.
       const totalSize = items.reduce((s, i) => s + i.file.size, 0);
       const perFileLoaded = new Array(uploads.length).fill(0);
 
@@ -255,8 +259,7 @@ export function UploadForm() {
       setStatus({ state: 'success' });
       items.forEach((i) => URL.revokeObjectURL(i.previewUrl));
       setItems([]);
-      setTitle('');
-      setDescription('');
+      setProjectName('');
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Something went wrong.';
@@ -326,6 +329,19 @@ export function UploadForm() {
         />
       </div>
 
+      {/* Project name */}
+      <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
+        <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
+          Project / Date
+        </label>
+        <input
+          value={projectName}
+          onChange={(e) => setProjectName(e.target.value)}
+          placeholder="e.g. Site walkthrough — May 11"
+          className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
+        />
+      </div>
+
       {/* Media picker */}
       <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
         <div className="flex items-center justify-between">
@@ -368,57 +384,90 @@ export function UploadForm() {
         </button>
 
         {items.length > 0 && (
-          <div className="media-grid mt-4 grid max-h-96 grid-cols-3 gap-2 overflow-y-auto pr-1">
-            {items.map((item) => (
-              <div
+          <ul className="mt-4 flex flex-col gap-3">
+            {items.map((item, idx) => (
+              <li
                 key={item.id}
-                className="fade-in-up group relative aspect-square overflow-hidden rounded-lg bg-brand-100 ring-1 ring-brand-200"
+                className="fade-in-up relative rounded-xl border border-brand-200 bg-brand-50/40 p-3"
               >
-                {item.kind === 'image' ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.previewUrl}
-                    alt={item.file.name}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <>
-                    {item.videoThumbUrl ? (
+                <div className="flex gap-3">
+                  {/* Thumbnail */}
+                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-brand-100 ring-1 ring-brand-200">
+                    {item.kind === 'image' ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
-                        src={item.videoThumbUrl}
+                        src={item.previewUrl}
                         alt={item.file.name}
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <div className="flex h-full w-full items-center justify-center text-brand-400">
-                        <svg
-                          className="h-7 w-7 animate-pulse"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
+                      <>
+                        {item.videoThumbUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={item.videoThumbUrl}
+                            alt={item.file.name}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-brand-400">
+                            <svg
+                              className="h-6 w-6 animate-pulse"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/15">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/40">
+                            <svg
+                              className="ml-0.5 h-3.5 w-3.5 text-white"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M8 5v14l11-7z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </>
                     )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/15">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/55 ring-1 ring-white/40">
-                        <svg
-                          className="ml-0.5 h-5 w-5 text-white"
-                          viewBox="0 0 24 24"
-                          fill="currentColor"
-                        >
-                          <path d="M8 5v14l11-7z" />
-                        </svg>
-                      </div>
-                    </div>
-                  </>
-                )}
+                  </div>
+
+                  {/* Fields */}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="truncate text-[11px] text-brand-500"
+                      title={item.file.name}
+                    >
+                      {idx + 1}. {item.file.name} · {formatBytes(item.file.size)}
+                    </p>
+                    <input
+                      value={item.title}
+                      onChange={(e) =>
+                        updateItem(item.id, { title: e.target.value })
+                      }
+                      placeholder="Subject / name / number"
+                      className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-1.5 text-sm text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
+                    />
+                    <textarea
+                      value={item.notes}
+                      onChange={(e) =>
+                        updateItem(item.id, { notes: e.target.value })
+                      }
+                      rows={2}
+                      placeholder="Notes about this file (optional)"
+                      className="mt-2 w-full resize-none rounded-md border border-brand-200 bg-white px-2 py-1.5 text-sm text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
+                    />
+                  </div>
+                </div>
+
                 <button
                   type="button"
                   onClick={() => removeItem(item.id)}
                   aria-label="Remove"
-                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent-600 text-white opacity-90 shadow-soft transition hover:bg-accent-500 group-hover:opacity-100"
+                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-accent-600 text-white opacity-90 shadow-soft transition hover:bg-accent-500"
                 >
                   <svg
                     className="h-3.5 w-3.5"
@@ -431,33 +480,10 @@ export function UploadForm() {
                     <path d="M6 6l12 12M18 6 6 18" />
                   </svg>
                 </button>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
-      </div>
-
-      {/* Details */}
-      <div className="rounded-2xl border border-brand-200 bg-white p-4 shadow-card">
-        <label className="block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
-          Title
-        </label>
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="e.g. Site walkthrough — drone footage"
-          className="mt-1 w-full border-0 border-b border-brand-200 bg-transparent py-2 text-base text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
-        />
-        <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
-          Description / notes
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          rows={4}
-          placeholder="Anything you'd like us to know about these files…"
-          className="mt-1 w-full resize-none rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-sm text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
-        />
       </div>
 
       {/* Submit */}

@@ -9,7 +9,13 @@ export const dynamic = 'force-dynamic';
 const MAX_FILES = 50;
 const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500 MB per file
 
-type FileInfo = { name: string; size: number; type: string };
+type FileInfo = {
+  name: string;
+  size: number;
+  type: string;
+  title?: string;
+  notes?: string;
+};
 
 function sanitizeFilename(name: string) {
   const base = name.split(/[\\/]/).pop() || 'upload';
@@ -32,8 +38,7 @@ export async function POST(req: NextRequest) {
   let body: {
     clientName?: string;
     clientEmail?: string;
-    title?: string;
-    description?: string;
+    projectName?: string;
     files?: FileInfo[];
   };
 
@@ -48,8 +53,7 @@ export async function POST(req: NextRequest) {
 
   const clientName = (body.clientName ?? '').trim();
   const clientEmail = (body.clientEmail ?? '').trim();
-  const title = (body.title ?? '').trim();
-  const description = (body.description ?? '').trim();
+  const projectName = (body.projectName ?? '').trim();
   const fileInfos = body.files ?? [];
 
   if (!clientName) {
@@ -123,6 +127,8 @@ export async function POST(req: NextRequest) {
         mimeType: f.type || 'application/octet-stream',
         size: f.size,
         kind: f.kind,
+        title: f.title?.trim() || undefined,
+        notes: f.notes?.trim() || undefined,
       });
       uploads.push({ storedName, sessionUri });
     }
@@ -143,8 +149,7 @@ export async function POST(req: NextRequest) {
     createdAt: new Date().toISOString(),
     clientName,
     clientEmail: clientEmail || undefined,
-    title: title || undefined,
-    description: description || undefined,
+    projectName: projectName || undefined,
     files: storedFiles,
     status: 'pending',
   };

@@ -80,7 +80,7 @@ export default async function AdminPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-base font-semibold text-brand-900">
-                      {s.title || 'Untitled submission'}
+                      {s.projectName || 'Untitled project'}
                     </h2>
                     <p className="text-xs text-brand-500">
                       {formatDate(s.createdAt)}
@@ -100,52 +100,62 @@ export default async function AdminPage() {
                 </div>
               </div>
 
-              {/* Description */}
-              {s.description && (
-                <div className="border-b border-brand-100 px-4 py-3">
-                  <p className="whitespace-pre-wrap text-sm text-brand-700">
-                    {s.description}
-                  </p>
-                </div>
-              )}
-
-              {/* Media grid */}
+              {/* Files list */}
               <div className="px-4 py-3">
-                <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                <ul className="flex flex-col gap-3">
                   {s.files.map((f) => {
                     const url = `/api/media/${s.id}/${encodeURIComponent(f.storedName)}`;
                     return (
-                      <Link
+                      <li
                         key={f.storedName}
-                        href={url}
-                        target="_blank"
-                        className="group relative aspect-square overflow-hidden rounded-lg bg-brand-100 ring-1 ring-brand-200 transition hover:ring-accent-400"
-                        title={`${f.originalName} · ${formatBytes(f.size)}`}
+                        className="flex gap-3 rounded-lg border border-brand-100 bg-white p-2"
                       >
-                        {f.kind === 'image' ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={url}
-                            alt={f.originalName}
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <div className="relative flex h-full w-full items-center justify-center bg-brand-800">
-                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/30">
-                              <svg className="ml-0.5 h-4 w-4 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M8 5v14l11-7z" />
-                              </svg>
+                        <Link
+                          href={url}
+                          target="_blank"
+                          className="group relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-brand-100 ring-1 ring-brand-200 transition hover:ring-accent-400"
+                          title={`${f.originalName} · ${formatBytes(f.size)}`}
+                        >
+                          {f.kind === 'image' ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={url}
+                              alt={f.originalName}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <div className="relative flex h-full w-full items-center justify-center bg-brand-800">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 ring-1 ring-white/30">
+                                <svg className="ml-0.5 h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M8 5v14l11-7z" />
+                                </svg>
+                              </div>
                             </div>
-                            <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
-                              {formatBytes(f.size)}
-                            </span>
-                          </div>
-                        )}
-                        <FileDownloadButton submissionId={s.id} storedName={f.storedName} />
-                      </Link>
+                          )}
+                          <FileDownloadButton submissionId={s.id} storedName={f.storedName} />
+                        </Link>
+                        <div className="min-w-0 flex-1">
+                          {f.title && (
+                            <p className="truncate text-sm font-semibold text-brand-900">
+                              {f.title}
+                            </p>
+                          )}
+                          <p
+                            className="truncate text-[11px] text-brand-500"
+                            title={f.originalName}
+                          >
+                            {f.originalName} · {formatBytes(f.size)}
+                          </p>
+                          {f.notes && (
+                            <p className="mt-1 whitespace-pre-wrap text-xs text-brand-700">
+                              {f.notes}
+                            </p>
+                          )}
+                        </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               </div>
 
               {/* Footer with stats + actions */}
