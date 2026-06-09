@@ -175,6 +175,11 @@ export default async function ReviewsAdminPage() {
                           <span className="text-xs font-medium text-brand-400">Pending</span>
                         )}
                       </div>
+                      {p.description && (
+                        <p className="mt-0.5 line-clamp-2 text-xs italic text-brand-500">
+                          {p.description}
+                        </p>
+                      )}
                       {p.caption && (
                         <p className="mt-0.5 line-clamp-2 text-xs text-brand-600">
                           {p.caption}

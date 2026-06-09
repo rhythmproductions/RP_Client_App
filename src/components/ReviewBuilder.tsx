@@ -16,6 +16,7 @@ type DraftMedia = {
 type DraftPost = {
   id: string;
   type: PostType;
+  description: string;
   caption: string;
   media: DraftMedia[];
 };
@@ -234,6 +235,18 @@ function PostEditor({
         </div>
       )}
 
+      {/* Description — your note to the client about this post */}
+      <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
+        Description for the client
+      </label>
+      <textarea
+        value={post.description}
+        onChange={(e) => onChange({ description: e.target.value })}
+        rows={3}
+        placeholder="Describe this post to the client — what it is, where it'll run, anything they should know…"
+        className="mt-1 w-full resize-y rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm text-brand-900 placeholder:text-brand-400 focus:border-accent-600 focus:outline-none focus:ring-0"
+      />
+
       {/* Caption */}
       <label className="mt-4 block text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-500">
         Post copy / caption
@@ -252,7 +265,7 @@ function PostEditor({
 // ── Builder ─────────────────────────────────────────────────────────
 
 function emptyPost(): DraftPost {
-  return { id: uid(), type: 'single', caption: '', media: [] };
+  return { id: uid(), type: 'single', description: '', caption: '', media: [] };
 }
 
 export function ReviewBuilder() {
@@ -300,6 +313,7 @@ export function ReviewBuilder() {
           projectName: projectName.trim(),
           posts: posts.map((p) => ({
             type: p.type,
+            description: p.description,
             caption: p.caption,
             files: p.media.map((m) => ({
               name: m.file.name,

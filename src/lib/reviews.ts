@@ -23,6 +23,9 @@ export type PostDecision = 'pending' | 'approved' | 'changes_requested';
 export type ReviewPost = {
   id: string;
   type: PostType;
+  // A note from the studio describing this post to the client (context,
+  // intent, where it'll run) — separate from the caption being approved.
+  description: string;
   // The caption / post copy the client is approving.
   caption: string;
   // 1 item for single/reel/video, many for a carousel.

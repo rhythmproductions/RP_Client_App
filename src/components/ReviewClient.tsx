@@ -175,9 +175,19 @@ function PostCard({
           )}
         </div>
 
+        {/* Description — the studio's note about this post */}
+        {post.description && (
+          <p className="mb-3 whitespace-pre-wrap text-sm leading-relaxed text-brand-700">
+            {post.description}
+          </p>
+        )}
+
         {/* Caption / post copy */}
         {post.caption ? (
           <div className="group relative rounded-xl bg-brand-50 p-3">
+            <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-400">
+              Caption
+            </p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-brand-800">
               {post.caption}
             </p>

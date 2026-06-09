@@ -20,7 +20,12 @@ const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500 MB per file
 const POST_TYPES: PostType[] = ['single', 'carousel', 'reel', 'video'];
 
 type IncomingFile = { name: string; size: number; type: string };
-type IncomingPost = { type?: string; caption?: string; files?: IncomingFile[] };
+type IncomingPost = {
+  type?: string;
+  description?: string;
+  caption?: string;
+  files?: IncomingFile[];
+};
 
 function sanitizeFilename(name: string) {
   const base = name.split(/[\\/]/).pop() || 'upload';
@@ -94,6 +99,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      const description = (incoming.description ?? '').trim();
       const caption = (incoming.caption ?? '').trim();
       const files = incoming.files ?? [];
       if (files.length === 0) {
@@ -153,6 +159,7 @@ export async function POST(req: NextRequest) {
       posts.push({
         id: crypto.randomUUID(),
         type,
+        description,
         caption,
         media,
         decision: 'pending',
