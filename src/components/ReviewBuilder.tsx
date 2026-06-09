@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from 'react';
 import type { PostType } from '@/lib/reviews';
+import { reviewUrl } from '@/lib/site';
 
 // ── Local types ─────────────────────────────────────────────────────
 
@@ -357,7 +358,7 @@ export function ReviewBuilder() {
         throw new Error(body.error ?? 'Confirmation failed.');
       }
 
-      const url = `${window.location.origin}/review/${token}`;
+      const url = reviewUrl(token);
       flatFiles.forEach((m) => URL.revokeObjectURL(m.previewUrl));
       setStatus({ state: 'done', url });
     } catch (err) {

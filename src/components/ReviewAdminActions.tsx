@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { reviewUrl } from '@/lib/site';
 
 /** Copy a review's public client link to the clipboard. */
 export function CopyLinkButton({ token }: { token: string }) {
   const [copied, setCopied] = useState(false);
 
   const copy = async () => {
-    const url = `${window.location.origin}/review/${token}`;
+    const url = reviewUrl(token);
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

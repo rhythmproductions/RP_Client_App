@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { asset } from '@/lib/site';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -13,10 +14,8 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
   },
   icons: {
-    icon: [
-      { url: '/FaviconLogo.jpg', type: 'image/jpeg' },
-    ],
-    apple: [{ url: '/FaviconLogo.jpg', type: 'image/jpeg' }],
+    icon: [{ url: asset('/FaviconLogo.jpg'), type: 'image/jpeg' }],
+    apple: [{ url: asset('/FaviconLogo.jpg'), type: 'image/jpeg' }],
   },
 };
 

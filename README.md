@@ -167,6 +167,14 @@ No new environment variables are required — the approval system reuses
 (for decision emails). Review metadata lives in its own Netlify Blobs
 store (`reviews`), separate from uploads.
 
+### Serving review links on your main domain
+
+To hand clients `https://rhythmproductions.ca/review/<token>` (apex
+domain) instead of a subdomain, proxy three paths from your main Netlify
+site to this app. See **[docs/serve-under-main-site.md](docs/serve-under-main-site.md)**
+for the exact rewrite rules and the two optional env vars
+(`NEXT_PUBLIC_ASSET_BASE`, `NEXT_PUBLIC_REVIEW_BASE_URL`).
+
 ## Ideas for v2
 
 - Swap disk storage for S3-compatible object storage
