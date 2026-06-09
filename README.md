@@ -131,6 +131,42 @@ Brand colors live in `tailwind.config.ts`:
 - `brand-500`/`brand-600` — logo grey (used for secondary text)
 - `brand-50`…`brand-200` — light surfaces (backgrounds, cards, borders)
 
+## Client deliverable approval system
+
+Alongside the upload portal, the app includes an **approval system** for
+sending finished social posts to clients for sign-off.
+
+### How it works
+
+1. **You** go to `/admin/reviews` → **New approval review**.
+2. Add one or more posts. Each post has a **type** (single photo,
+   multi-photo carousel, reel, or video), its **media**, and the
+   **post copy / caption** the client is approving.
+3. Hit **Create review & get link**. Media uploads directly to Google
+   Drive (same resumable flow as the upload portal — big videos are fine),
+   and you get a **private link** like
+   `https://rhythmproductions.ca/review/<token>`.
+4. Send that link to your client. The token is an unguessable secret — no
+   login or passcode, anyone with the link can open it (and only them).
+5. On the review page the client sees each post with its caption and taps
+   **Approve** or **Request changes** (which opens a note box). Every
+   decision saves instantly.
+6. **You** get an email (to `info@rhythmproductions.ca`) on each decision,
+   and can watch live status at `/admin/reviews`.
+
+### Routes
+
+```
+/admin/reviews            # list of reviews + live approval status
+/admin/reviews/new        # build & publish a new review
+/review/<token>           # the private client-facing approval page
+```
+
+No new environment variables are required — the approval system reuses
+`ADMIN_PASSWORD` (to build reviews), the Google Drive storage, and Resend
+(for decision emails). Review metadata lives in its own Netlify Blobs
+store (`reviews`), separate from uploads.
+
 ## Ideas for v2
 
 - Swap disk storage for S3-compatible object storage
