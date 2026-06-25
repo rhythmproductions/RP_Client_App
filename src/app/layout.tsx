@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from 'next';
-import { asset } from '@/lib/site';
 import './globals.css';
 
 export const metadata: Metadata = {
   title: 'Rhythm Productions — Client Upload',
   description:
     'Send your photos and videos to Rhythm Productions. Simple, secure uploads from your phone.',
-  manifest: '/manifest.json',
   applicationName: 'RP Upload',
   appleWebApp: {
     capable: true,
@@ -14,8 +12,8 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
   },
   icons: {
-    icon: [{ url: asset('/FaviconLogo.jpg'), type: 'image/jpeg' }],
-    apple: [{ url: asset('/FaviconLogo.jpg'), type: 'image/jpeg' }],
+    icon: [{ url: '/rp/FaviconLogo.jpg', type: 'image/jpeg' }],
+    apple: [{ url: '/rp/FaviconLogo.jpg', type: 'image/jpeg' }],
   },
 };
 
