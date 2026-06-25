@@ -138,10 +138,11 @@ sending finished social posts to clients for sign-off.
 
 ### How it works
 
-1. **You** go to `/admin/reviews` → **New approval review**.
+1. **You** go to `/portal` → **New approval review**.
 2. Add one or more posts. Each post has a **type** (single photo,
-   multi-photo carousel, reel, or video), its **media**, and the
-   **post copy / caption** the client is approving.
+   multi-photo carousel, reel, or video), its **media**, a **description**
+   (your note to the client), and the **post copy / caption** the client is
+   approving.
 3. Hit **Create review & get link**. Media uploads directly to Google
    Drive (same resumable flow as the upload portal — big videos are fine),
    and you get a **private link** like
@@ -152,28 +153,31 @@ sending finished social posts to clients for sign-off.
    **Approve** or **Request changes** (which opens a note box). Every
    decision saves instantly.
 6. **You** get an email (to `info@rhythmproductions.ca`) on each decision,
-   and can watch live status at `/admin/reviews`.
+   and can watch live status at `/portal`.
 
 ### Routes
 
 ```
-/admin/reviews            # list of reviews + live approval status
-/admin/reviews/new        # build & publish a new review
+/upload                   # client upload page (gated by UPLOAD_ACCESS_CODE)
+/admin                    # client-uploads dashboard
+/portal                   # approval reviews — list + live status
+/portal/new               # build & publish a new review
 /review/<token>           # the private client-facing approval page
 ```
 
-No new environment variables are required — the approval system reuses
-`ADMIN_PASSWORD` (to build reviews), the Google Drive storage, and Resend
-(for decision emails). Review metadata lives in its own Netlify Blobs
-store (`reviews`), separate from uploads.
+The approval system reuses `ADMIN_PASSWORD` (for `/portal`), the Google
+Drive storage, and Resend (for decision emails). Review metadata lives in
+its own Netlify Blobs store (`reviews`), separate from uploads.
 
-### Serving review links on your main domain
+### Serving everything under your main domain
 
-To hand clients `https://rhythmproductions.ca/review/<token>` (apex
-domain) instead of a subdomain, proxy three paths from your main Netlify
-site to this app. See **[docs/serve-under-main-site.md](docs/serve-under-main-site.md)**
-for the exact rewrite rules and the two optional env vars
-(`NEXT_PUBLIC_ASSET_BASE`, `NEXT_PUBLIC_REVIEW_BASE_URL`).
+To serve `/upload`, `/portal` and `/review/...` from your apex domain
+(`https://rhythmproductions.ca/...`) instead of a subdomain — which also
+clears any subdomain certificate warnings — proxy a few paths from your
+main Netlify site to this app. See
+**[docs/serve-under-main-site.md](docs/serve-under-main-site.md)** for the
+exact rewrite rules and the env vars (`NEXT_PUBLIC_ASSET_BASE`,
+`NEXT_PUBLIC_REVIEW_BASE_URL`, `UPLOAD_ACCESS_CODE`).
 
 ## Ideas for v2
 

@@ -52,22 +52,10 @@ export default async function AdminPage() {
       <Brand subtitle="Client submissions" />
 
       <div className="mx-4 mb-4 flex items-center justify-between">
-        <Link
-          href="/admin/reviews"
-          className="flex items-center gap-1.5 rounded-full border border-brand-300 bg-white px-3 py-1.5 text-xs font-medium text-brand-700 transition hover:border-accent-500 hover:text-accent-600"
-        >
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-          </svg>
-          Client approvals
-        </Link>
-        <AdminSignOutButton />
-      </div>
-
-      <div className="mx-4 mb-4">
         <p className="text-sm text-brand-500">
           {submissions.length} submission{submissions.length === 1 ? '' : 's'}
         </p>
+        <AdminSignOutButton />
       </div>
 
       <div className="mx-4 mb-10 flex flex-col gap-4">

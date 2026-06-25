@@ -1,84 +1,108 @@
-# Serving the client review pages under your main site
+# Serving the app under your main site (rhythmproductions.ca)
 
-By default this app lives on its own Netlify URL (e.g.
-`your-approval-app.netlify.app`). You can make the **client-facing review
-links** appear on your main apex domain instead — so clients get
-`https://rhythmproductions.ca/review/<token>` rather than a subdomain —
-without merging the two sites.
+By default this app lives on its own Netlify URL. To serve it under your
+main apex domain — so you get clean, secure paths like:
 
-Your main `rhythmproductions.ca` site (a separate Netlify site) simply
-**proxies** three namespaced paths to this app. Everything else on your
-marketing site is untouched.
+- `https://rhythmproductions.ca/upload` — the client upload page (code-gated)
+- `https://rhythmproductions.ca/portal` — your approval admin panel
+- `https://rhythmproductions.ca/admin` — the client-uploads dashboard
+- `https://rhythmproductions.ca/review/<token>` — the client approval page
 
-## 1. Configure this approval app
+…your main `rhythmproductions.ca` site (a separate, git-connected Netlify
+site) **proxies** a handful of paths to this app. Visitors only ever see
+`rhythmproductions.ca`, which has a valid certificate — so the "Not secure"
+warning from the app's own subdomain never reaches them.
 
-In this app's Netlify site → **Site settings → Environment variables**,
-add:
+## 1. Configure this app (already done for rp-client-upload)
+
+In this app's Netlify site → **Site configuration → Environment variables**:
 
 | Variable | Value | Why |
 | --- | --- | --- |
-| `NEXT_PUBLIC_ASSET_BASE` | this app's own URL, e.g. `https://your-approval-app.netlify.app` | Bundled JS/CSS + the logo load from here, not the proxying site |
-| `NEXT_PUBLIC_REVIEW_BASE_URL` | your public domain, e.g. `https://rhythmproductions.ca` | The shareable link an admin copies points at the apex domain |
+| `NEXT_PUBLIC_ASSET_BASE` | this app's `*.netlify.app` URL, e.g. `https://rp-client-upload.netlify.app` | Bundled JS/CSS + the logo load from a URL with a valid certificate, not the proxying site |
+| `NEXT_PUBLIC_REVIEW_BASE_URL` | `https://rhythmproductions.ca` | Generated links (share link, email dashboard links) point at the apex domain |
+| `UPLOAD_ACCESS_CODE` | e.g. `456` | The code clients must enter on `/upload` (change anytime) |
 
-Then trigger a redeploy of this app (these are build-time values).
+> Use the `*.netlify.app` URL (always valid SSL) as the proxy target and
+> asset base — not a custom subdomain whose certificate may be unprovisioned.
 
-> Note: leave the **upload portal and `/admin`** on this app's own URL —
-> they don't need to be proxied, and admin stays password-protected here.
+## 2. Add the proxy rules to your MAIN site
 
-## 2. Add three rewrites to your MAIN site
-
-On the `rhythmproductions.ca` Netlify site, add the following to its
-`netlify.toml` (or the equivalent `_redirects` rules). Replace
-`your-approval-app.netlify.app` with this app's real URL.
+On the `rhythmproductions.ca` Netlify site's repo, add this to a
+`netlify.toml` at the repo root (append the `[[redirects]]` blocks if the
+file already exists), then push to its production branch (`master`):
 
 ```toml
-# Proxy the Rhythm Productions client-approval pages onto the main domain.
+# Proxy the Rhythm Productions client app onto the main domain.
+# Order matters: keep these ABOVE any catch-all/SPA redirect.
+
+[[redirects]]
+  from = "/upload"
+  to = "https://rp-client-upload.netlify.app/upload"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/upload/*"
+  to = "https://rp-client-upload.netlify.app/upload/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/portal/*"
+  to = "https://rp-client-upload.netlify.app/portal/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/portal"
+  to = "https://rp-client-upload.netlify.app/portal"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/admin/*"
+  to = "https://rp-client-upload.netlify.app/admin/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/admin"
+  to = "https://rp-client-upload.netlify.app/admin"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/review/*"
-  to = "https://your-approval-app.netlify.app/review/:splat"
+  to = "https://rp-client-upload.netlify.app/review/:splat"
   status = 200
   force = true
 
 [[redirects]]
-  from = "/api/review/*"
-  to = "https://your-approval-app.netlify.app/api/review/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/api/review-media/*"
-  to = "https://your-approval-app.netlify.app/api/review-media/:splat"
+  from = "/api/*"
+  to = "https://rp-client-upload.netlify.app/api/:splat"
   status = 200
   force = true
 ```
 
-Equivalent `_redirects` syntax:
+`status = 200` makes these **proxy rewrites**: the URL stays
+`rhythmproductions.ca/...` in the browser while the content is served from
+this app. The app's bundled `_next/*` assets load directly from
+`NEXT_PUBLIC_ASSET_BASE`, so they don't need a proxy rule.
 
-```
-/review/*            https://your-approval-app.netlify.app/review/:splat            200!
-/api/review/*        https://your-approval-app.netlify.app/api/review/:splat        200!
-/api/review-media/*  https://your-approval-app.netlify.app/api/review-media/:splat  200!
-```
+### Heads-up on collisions
 
-`status = 200` (the `!` / `force`) makes these **proxy rewrites**: the URL
-stays `rhythmproductions.ca/review/...` in the client's browser while the
-content is served from this app.
+`/api/*` and `/admin/*` are generic. If your marketing site already uses
+either path for its own pages or functions, tell me and we'll namespace
+around it. A typical static marketing site doesn't, so this is usually safe.
 
-## Why only these three paths?
+## 3. Test
 
-- `/review/*` — the client review pages.
-- `/api/review/*` — recording approve / request-changes decisions.
-- `/api/review-media/*` — streaming the post photos & videos.
+After both sites have redeployed:
 
-All three are uniquely namespaced, so they won't collide with your
-marketing site's own pages or assets. The app's bundled `_next/*` assets
-and logo are served from this app's own URL via `NEXT_PUBLIC_ASSET_BASE`,
-so there's nothing else to proxy.
-
-## Checklist
-
-1. Set the two env vars on the approval app, redeploy it.
-2. Add the three rewrites to the main site, deploy it.
-3. Visit `https://rhythmproductions.ca/review/<token>` for any published
-   review — it should render with the logo, media, and working Approve /
-   Request changes buttons.
+1. `https://rhythmproductions.ca/upload` → should ask for the access code,
+   then show the upload form.
+2. `https://rhythmproductions.ca/portal` → should ask for the admin
+   password, then show the approval dashboard.
+3. Create a review, copy its link (`https://rhythmproductions.ca/review/...`),
+   open it, and confirm the media loads and Approve / Request changes work.
