@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'node:crypto';
 import { addSubmission, type StoredFile, type Submission } from '@/lib/db';
 import { createResumableUploadSession } from '@/lib/storage';
+import { requireUploadAccess } from '@/lib/auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -35,6 +36,9 @@ function kindOf(mime: string): StoredFile['kind'] {
  * Google Drive.
  */
 export async function POST(req: NextRequest) {
+  const access = requireUploadAccess(req);
+  if (!access.ok) return access.response;
+
   let body: {
     clientName?: string;
     clientEmail?: string;

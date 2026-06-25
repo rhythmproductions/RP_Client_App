@@ -55,18 +55,15 @@ export default async function ReviewsAdminPage() {
       <Brand subtitle="Client approvals" />
 
       <div className="mx-4 mb-4 flex items-center justify-between">
-        <Link
-          href="/admin"
-          className="text-xs font-medium text-brand-500 transition hover:text-accent-600"
-        >
-          ← Uploads
-        </Link>
+        <p className="text-sm text-brand-500">
+          {reviews.length} review{reviews.length === 1 ? '' : 's'}
+        </p>
         <AdminSignOutButton />
       </div>
 
       <div className="mx-4 mb-4">
         <Link
-          href="/admin/reviews/new"
+          href="/portal/new"
           className="flex w-full items-center justify-center gap-2 rounded-full bg-accent-600 px-5 py-3 text-sm font-semibold text-white shadow-soft transition hover:bg-accent-500"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

@@ -34,7 +34,7 @@ export default function NewReviewPage() {
       <Brand subtitle="New approval review" />
       <div className="mx-4 mb-4">
         <Link
-          href="/admin/reviews"
+          href="/portal"
           className="text-xs font-medium text-brand-500 transition hover:text-accent-600"
         >
           ← All reviews

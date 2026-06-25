@@ -37,7 +37,11 @@ export async function notifyNewSubmission(sub: Submission): Promise<void> {
   if (videoCount > 0) parts.push(`${videoCount} video${videoCount === 1 ? '' : 's'}`);
   const fileSummary = parts.join(' and ');
 
-  const adminUrl = `${process.env.URL ?? 'https://rp-client-upload.netlify.app'}/admin`;
+  const siteBase =
+    process.env.NEXT_PUBLIC_REVIEW_BASE_URL ??
+    process.env.URL ??
+    'https://rp-client-upload.netlify.app';
+  const adminUrl = `${siteBase}/admin`;
 
   const subject = `New upload from ${sub.clientName}${sub.projectName ? ` — ${sub.projectName}` : ''}`;
 
@@ -138,7 +142,11 @@ export async function notifyReviewDecision(
     (p) => p.decision === 'pending',
   ).length;
 
-  const reviewUrl = `${process.env.URL ?? 'https://rp-client-upload.netlify.app'}/admin/reviews`;
+  const siteBase =
+    process.env.NEXT_PUBLIC_REVIEW_BASE_URL ??
+    process.env.URL ??
+    'https://rp-client-upload.netlify.app';
+  const reviewUrl = `${siteBase}/portal`;
 
   const verb = approved ? 'approved a post' : 'requested changes';
   const subject = `${review.clientName} ${verb}${review.projectName ? ` — ${review.projectName}` : ''}`;

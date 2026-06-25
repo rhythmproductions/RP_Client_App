@@ -418,7 +418,7 @@ export function ReviewBuilder() {
         </div>
         <div className="mt-5 flex justify-center gap-2">
           <a
-            href="/admin/reviews"
+            href="/portal"
             className="rounded-full border border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 transition hover:bg-brand-50"
           >
             View all reviews
