@@ -138,3 +138,30 @@ export async function deleteDriveFile(driveFileId: string): Promise<void> {
     supportsAllDrives: true,
   });
 }
+
+/**
+ * Fetch a file's bytes from Drive as a raw HTTP response, forwarding an
+ * optional Range header. Returning the upstream response lets the caller
+ * proxy `206 Partial Content` straight through, which browsers (Safari /
+ * iOS in particular) require to play and seek within video files.
+ */
+export async function fetchDriveMedia(
+  driveFileId: string,
+  range?: string,
+): Promise<Response> {
+  const auth = getAuth();
+  const { token } = await auth.getAccessToken();
+  if (!token) {
+    throw new Error('Failed to obtain Google access token.');
+  }
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+  };
+  if (range) headers.Range = range;
+
+  return fetch(
+    `https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media&supportsAllDrives=true`,
+    { headers },
+  );
+}
