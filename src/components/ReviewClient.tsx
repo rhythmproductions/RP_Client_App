@@ -1,7 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import type { PostDecision, PostType, ReviewPost } from '@/lib/reviews';
+import type { DisplayMode, PostDecision, PostType, ReviewPost } from '@/lib/reviews';
+import { dayName, groupByWeek, parseYmd, shortDate } from '@/lib/calendar';
 
 const POST_TYPE_LABEL: Record<PostType, string> = {
   single: 'Single photo',
@@ -97,11 +98,13 @@ function PostCard({
   token,
   post,
   index,
+  hideIndex = false,
   onDecided,
 }: {
   token: string;
   post: LocalPost;
   index: number;
+  hideIndex?: boolean;
   onDecided: (post: LocalPost) => void;
 }) {
   const [showChanges, setShowChanges] = useState(false);
@@ -155,7 +158,7 @@ function PostCard({
       <div className="p-4">
         <div className="mb-2 flex items-center justify-between gap-2">
           <span className="rounded-full bg-brand-100 px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-brand-600">
-            Post {index + 1} · {POST_TYPE_LABEL[post.type]}
+            {hideIndex ? POST_TYPE_LABEL[post.type] : `Post ${index + 1} · ${POST_TYPE_LABEL[post.type]}`}
           </span>
           {approved && (
             <span className="flex items-center gap-1 text-xs font-semibold text-green-600">
@@ -303,14 +306,36 @@ export function ReviewClient({
   token,
   clientName,
   projectName,
+  displayMode = 'feed',
   posts: initialPosts,
 }: {
   token: string;
   clientName: string;
   projectName?: string;
+  displayMode?: DisplayMode;
   posts: ReviewPost[];
 }) {
   const [posts, setPosts] = useState<LocalPost[]>(initialPosts);
+
+  // Index every post by id so calendar grouping (which works on a trimmed
+  // copy) can resolve back to the live, decision-tracked post object.
+  const byId = useMemo(() => {
+    const m = new Map<string, LocalPost>();
+    for (const p of posts) m.set(p.id, p);
+    return m;
+  }, [posts]);
+
+  const weeks = useMemo(
+    () =>
+      displayMode === 'calendar'
+        ? groupByWeek(posts.map((p) => ({ id: p.id, date: p.date })))
+        : [],
+    [displayMode, posts],
+  );
+  const undated = useMemo(
+    () => (displayMode === 'calendar' ? posts.filter((p) => !p.date) : []),
+    [displayMode, posts],
+  );
 
   const { approved, changes, pending } = useMemo(() => {
     return {
@@ -366,15 +391,67 @@ export function ReviewClient({
         )}
       </div>
 
-      {posts.map((post, i) => (
-        <PostCard
-          key={post.id}
-          token={token}
-          post={post}
-          index={i}
-          onDecided={handleDecided}
-        />
-      ))}
+      {displayMode === 'feed' &&
+        posts.map((post, i) => (
+          <PostCard
+            key={post.id}
+            token={token}
+            post={post}
+            index={i}
+            onDecided={handleDecided}
+          />
+        ))}
+
+      {displayMode === 'calendar' && (
+        <>
+          {weeks.map((week) => (
+            <div key={week.weekStart} className="flex flex-col gap-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-400">
+                Week of {week.weekLabel}
+              </p>
+              {week.items.map(({ date, post: ref }) => {
+                const post = byId.get(ref.id);
+                if (!post) return null;
+                return (
+                  <div key={post.id}>
+                    <p className="mb-1 text-sm font-semibold text-brand-800">
+                      {dayName(parseYmd(date))}
+                      <span className="ml-2 text-xs font-normal text-brand-400">
+                        {shortDate(parseYmd(date))}
+                      </span>
+                    </p>
+                    <PostCard
+                      token={token}
+                      post={post}
+                      index={0}
+                      hideIndex
+                      onDecided={handleDecided}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+
+          {undated.length > 0 && (
+            <div className="flex flex-col gap-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.15em] text-brand-400">
+                Other posts
+              </p>
+              {undated.map((post) => (
+                <PostCard
+                  key={post.id}
+                  token={token}
+                  post={post}
+                  index={0}
+                  hideIndex
+                  onDecided={handleDecided}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

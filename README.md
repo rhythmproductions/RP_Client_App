@@ -155,13 +155,25 @@ sending finished social posts to clients for sign-off.
 6. **You** get an email (to `info@rhythmproductions.ca`) on each decision,
    and can watch live status at `/portal`.
 
+Each portal is a **living page** for that client: from `/portal/<token>`
+you can add posts over time, **edit** a post's media/description/caption,
+and delete posts. Editing a post the client flagged sends it back to them
+as *pending* for re-approval — so you can go back and forth until it's
+approved. A portal can be shown in two modes (toggle at the top of the
+editor):
+
+- **One-at-a-time (feed)** — a simple vertical list of posts.
+- **Calendar** — schedule posts onto days; the client sees only the days
+  you filled, grouped by week (Monday start).
+
 ### Routes
 
 ```
 /upload                   # client upload page (gated by UPLOAD_ACCESS_CODE)
 /admin                    # client-uploads dashboard
-/portal                   # approval reviews — list + live status
-/portal/new               # build & publish a new review
+/portal                   # approval portals — list + live status
+/portal/new               # create a new client portal
+/portal/<token>           # manage a portal: add / edit / schedule / delete posts
 /review/<token>           # the private client-facing approval page
 ```
 

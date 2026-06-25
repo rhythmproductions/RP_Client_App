@@ -41,6 +41,7 @@ export default async function ReviewPage({
         token={review.token}
         clientName={review.clientName}
         projectName={review.projectName}
+        displayMode={review.displayMode ?? 'feed'}
         posts={review.posts}
       />
       <footer className="mt-auto px-6 pb-4 text-center text-[11px] font-medium uppercase tracking-[0.25em] text-brand-400">
