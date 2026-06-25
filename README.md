@@ -176,8 +176,9 @@ To serve `/upload`, `/portal` and `/review/...` from your apex domain
 clears any subdomain certificate warnings — proxy a few paths from your
 main Netlify site to this app. See
 **[docs/serve-under-main-site.md](docs/serve-under-main-site.md)** for the
-exact rewrite rules and the env vars (`NEXT_PUBLIC_ASSET_BASE`,
-`NEXT_PUBLIC_REVIEW_BASE_URL`, `UPLOAD_ACCESS_CODE`).
+exact rewrite rules (pages, `_next/*` and `/rp/*` assets, all proxied
+same-origin) and the env vars (`NEXT_PUBLIC_REVIEW_BASE_URL`,
+`UPLOAD_ACCESS_CODE`).
 
 ## Ideas for v2
 
