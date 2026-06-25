@@ -35,7 +35,13 @@ export type ReviewPost = {
   changeRequest?: string;
   // ISO timestamp of the most recent client decision on this post.
   decidedAt?: string;
+  // Calendar mode: the scheduled day as a YYYY-MM-DD string. Unused in
+  // feed mode.
+  date?: string;
 };
+
+// How a client portal lays its content out.
+export type DisplayMode = 'feed' | 'calendar';
 
 export type Review = {
   // Unguessable token — doubles as the blob key and the public URL slug
@@ -51,6 +57,8 @@ export type Review = {
   // 'draft' while media is still uploading; 'published' once the link
   // is live and the client can review it.
   status: 'draft' | 'published';
+  // How the portal presents posts. Defaults to 'feed' when absent.
+  displayMode?: DisplayMode;
 };
 
 // ── Blob store ──────────────────────────────────────────────────────
@@ -112,6 +120,17 @@ export async function listReviews(): Promise<Review[]> {
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────
+
+export function sanitizeFilename(name: string): string {
+  const base = name.split(/[\\/]/).pop() || 'upload';
+  return base.replace(/[^\w.\- ]+/g, '_').slice(0, 180);
+}
+
+export function kindOf(mime: string): ReviewMediaKind | 'other' {
+  if (mime.startsWith('image/')) return 'image';
+  if (mime.startsWith('video/')) return 'video';
+  return 'other';
+}
 
 /** Apply a client decision to a single post, returning the updated post. */
 export function applyDecision(

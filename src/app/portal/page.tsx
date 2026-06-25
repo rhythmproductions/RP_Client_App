@@ -194,6 +194,16 @@ export default async function ReviewsAdminPage() {
 
               {/* Actions */}
               <div className="flex flex-wrap items-center gap-2 border-t border-brand-100 bg-brand-50/30 px-4 py-3">
+                <Link
+                  href={`/portal/${r.token}`}
+                  className="flex items-center gap-1.5 rounded-full bg-accent-600 px-3 py-1.5 text-xs font-semibold text-white shadow-soft transition hover:bg-accent-500"
+                >
+                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                    <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z" />
+                  </svg>
+                  Edit posts
+                </Link>
                 <CopyLinkButton token={r.token} />
                 <OpenLinkButton token={r.token} />
                 <div className="ml-auto">
