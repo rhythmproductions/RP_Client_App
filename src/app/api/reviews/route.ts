@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
     clientName?: string;
     clientEmail?: string;
     projectName?: string;
+    displayMode?: string;
     posts?: IncomingPost[];
   };
 
@@ -64,14 +65,40 @@ export async function POST(req: NextRequest) {
   const clientName = (body.clientName ?? '').trim();
   const clientEmail = (body.clientEmail ?? '').trim();
   const projectName = (body.projectName ?? '').trim();
+  const displayMode = body.displayMode === 'calendar' ? 'calendar' : 'feed';
   const incomingPosts = body.posts ?? [];
 
   if (!clientName) {
     return NextResponse.json({ error: 'Please provide a client name.' }, { status: 400 });
   }
+
+  // An empty portal is created published immediately; the admin adds content
+  // afterward in the editor (feed list or calendar grid).
   if (incomingPosts.length === 0) {
-    return NextResponse.json({ error: 'Add at least one post.' }, { status: 400 });
+    const token = crypto.randomBytes(24).toString('base64url');
+    const review: Review = {
+      token,
+      createdAt: new Date().toISOString(),
+      clientName,
+      clientEmail: clientEmail || undefined,
+      projectName: projectName || undefined,
+      posts: [],
+      status: 'published',
+      displayMode,
+    };
+    try {
+      await addReview(review);
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : String(err);
+      console.error('Failed to save empty portal:', detail, err);
+      return NextResponse.json(
+        { error: `Could not create portal: ${detail}` },
+        { status: 500 },
+      );
+    }
+    return NextResponse.json({ token, uploads: [] }, { status: 201 });
   }
+
   if (incomingPosts.length > MAX_POSTS) {
     return NextResponse.json(
       { error: `Too many posts (max ${MAX_POSTS}).` },
@@ -182,6 +209,7 @@ export async function POST(req: NextRequest) {
     projectName: projectName || undefined,
     posts,
     status: 'draft',
+    displayMode,
   };
 
   try {

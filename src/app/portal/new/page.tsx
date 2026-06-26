@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { Brand } from '@/components/Brand';
 import { AdminLoginForm } from '@/components/AdminLoginForm';
-import { ReviewBuilder } from '@/components/ReviewBuilder';
+import { CreatePortalForm } from '@/components/CreatePortalForm';
 import { ADMIN_COOKIE_NAME, isAdminCookieValid, getAdminPassword } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -40,7 +40,7 @@ export default function NewReviewPage() {
           ← All reviews
         </Link>
       </div>
-      <ReviewBuilder />
+      <CreatePortalForm />
     </main>
   );
 }

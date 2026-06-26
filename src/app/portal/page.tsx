@@ -84,7 +84,7 @@ export default async function ReviewsAdminPage() {
           const approved = r.posts.filter((p) => p.decision === 'approved').length;
           const changes = r.posts.filter((p) => p.decision === 'changes_requested').length;
           const pending = r.posts.filter((p) => p.decision === 'pending').length;
-          const allDone = pending === 0;
+          const allDone = r.posts.length > 0 && pending === 0;
 
           return (
             <article

@@ -349,7 +349,7 @@ export function ReviewClient({
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
   };
 
-  const allDone = pending === 0;
+  const allDone = posts.length > 0 && pending === 0;
 
   return (
     <div className="mx-4 mb-10 flex flex-col gap-5">
