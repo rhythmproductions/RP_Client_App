@@ -1,0 +1,3 @@
+# Scraped comment files are local data — keep the folder, ignore the contents.
+*
+!.gitignore
